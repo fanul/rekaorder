@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(clasp init RekaOrder)",
+      "Bash(npx clasp --help)",
+      "Bash(npx clasp create RekaOrder --title \"RekaOrder\")",
+      "Bash(npx clasp create --help)",
+      "Bash(npx clasp create --title \"RekaOrder\" --type standalone)",
+      "Bash(git -C \"z:\\Project\\Life\\rekaorder\" config user.name \"fanul\")",
+      "Bash(git -C \"z:\\Project\\Life\\rekaorder\" config user.email \"fanul@example.com\")",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" config user.name \"fanul\")",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" config user.email \"fanul.doang@gmail.com\")",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" remote add origin https://github.com/fanul/rekaorder.git)",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" remote -v)",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" status)",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" add .claspignore .gitignore appsscript.json backend/ frontend/ setup/)",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" add -f appsscript.json .clasp.json)",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" commit -m \"$(cat <<''EOF''\nInitial commit: RekaOrder PWA v1.0.0\n\nFeatures:\n- Pre-order food PWA with Vue 3 + Tailwind CSS\n- Google Apps Script backend (GAS)\n- WhatsApp integration via WAHA API\n- Google Sheets database\n- Admin dashboard for order & product management\n- PWA manifest for mobile installation\n- Warm Batik Luxe design theme (women-friendly)\n\nProject structure:\n- backend/ - GAS server-side code\n- frontend/customer/ - Customer-facing PWA\n- frontend/admin/ - Admin dashboard\n- setup/ - Spreadsheet creation script\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" push -u origin master)",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" add README.md)",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" commit -m \"$(cat <<''EOF''\nAdd README with deployment instructions\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" push)",
+      "Bash(git --git-dir=\"z:/Project/Life/rekaorder/.git\" --work-tree=\"z:/Project/Life/rekaorder\" add -A)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

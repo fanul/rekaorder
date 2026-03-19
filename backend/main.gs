@@ -93,6 +93,14 @@ function doPost(e) {
         result = updateSettings(postData);
         break;
 
+      // Image upload
+      case 'uploadImage':
+        result = uploadImageBase64(postData);
+        break;
+      case 'deleteImage':
+        result = deleteImage(postData.fileId);
+        break;
+
       default:
         result = { success: false, error: 'Unknown action: ' + action };
     }

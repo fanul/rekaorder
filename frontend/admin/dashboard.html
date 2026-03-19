@@ -402,8 +402,44 @@
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">URL Gambar</label>
-            <input v-model="productForm.ImageURL" type="url" placeholder="https://..." class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Gambar Produk (bisa upload banyak)</label>
+
+            <!-- Image Slider -->
+            <div v-if="productImages.length > 0" class="relative mb-3">
+              <div class="aspect-video bg-sand rounded-lg overflow-hidden relative">
+                <img :src="productImages[currentImageIndex].url" class="w-full h-full object-cover">
+                <!-- Navigation arrows -->
+                <button v-if="productImages.length > 1" @click="prevImage" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <button v-if="productImages.length > 1" @click="nextImage" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                </button>
+                <!-- Dots -->
+                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                  <button v-for="(img, idx) in productImages" :key="idx" @click="currentImageIndex = idx" class="w-2 h-2 rounded-full transition-colors" :class="idx === currentImageIndex ? 'bg-terracotta' : 'bg-white/60'"></button>
+                </div>
+              </div>
+              <!-- Thumbnail strip -->
+              <div class="flex gap-2 mt-2 overflow-x-auto py-1">
+                <div v-for="(img, idx) in productImages" :key="idx" class="relative flex-shrink-0">
+                  <img :src="img.url" class="w-16 h-16 object-cover rounded-lg cursor-pointer border-2" :class="idx === currentImageIndex ? 'border-terracotta' : 'border-transparent'" @click="currentImageIndex = idx">
+                  <button @click="removeImage(idx)" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">&times;</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload Button -->
+            <div class="flex items-center gap-3">
+              <label class="cursor-pointer px-4 py-2 bg-terracotta text-white rounded-lg hover:bg-terracotta-dark transition-colors flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>{{ uploadingImage ? 'Mengupload...' : 'Tambah Gambar' }}</span>
+                <input type="file" accept="image/*" @change="handleImageUpload" class="hidden" :disabled="uploadingImage">
+              </label>
+              <span v-if="uploadError" class="text-red-500 text-sm">{{ uploadError }}</span>
+            </div>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Tags (pisahkan dengan koma)</label>
@@ -477,6 +513,10 @@
         const showAddProduct = ref(false);
         const editingProduct = ref(null);
         const selectedOrder = ref(null);
+        const uploadingImage = ref(false);
+        const uploadError = ref('');
+        const productImages = ref([]);  // Array of {id, url}
+        const currentImageIndex = ref(0);
         const settings = ref({
           STORE_NAME: '',
           MIN_ORDER_AMOUNT: '0',
@@ -596,14 +636,28 @@
 
         const editProduct = (product) => {
           editingProduct.value = product;
-          productForm.value = { ...product };
+          productForm.value = {
+            Name: product.Name || '',
+            Description: product.Description || '',
+            Category: product.Category || 'Makanan',
+            Price: product.Price || 0,
+            LeadTimeDays: product.LeadTimeDays || 0,
+            Stock: product.Stock || 0,
+            Images: product.Images ? product.Images.map(img => img.id).join(',') : '',
+            Tags: product.Tags || ''
+          };
+          // Load existing images
+          productImages.value = product.Images || [];
+          currentImageIndex.value = 0;
           showAddProduct.value = true;
         };
 
         const closeProductModal = () => {
           showAddProduct.value = false;
           editingProduct.value = null;
-          productForm.value = { Name: '', Description: '', Category: 'Makanan', Price: 0, LeadTimeDays: 0, Stock: 0, ImageURL: '', Tags: '' };
+          productForm.value = { Name: '', Description: '', Category: 'Makanan', Price: 0, LeadTimeDays: 0, Stock: 0, Images: '', Tags: '' };
+          productImages.value = [];
+          currentImageIndex.value = 0;
         };
 
         const saveProduct = async () => {
@@ -667,6 +721,85 @@
           return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         };
 
+        // Image slider methods
+        const prevImage = () => {
+          if (currentImageIndex.value > 0) {
+            currentImageIndex.value--;
+          } else {
+            currentImageIndex.value = productImages.value.length - 1;
+          }
+        };
+
+        const nextImage = () => {
+          if (currentImageIndex.value < productImages.value.length - 1) {
+            currentImageIndex.value++;
+          } else {
+            currentImageIndex.value = 0;
+          }
+        };
+
+        const removeImage = (index) => {
+          productImages.value.splice(index, 1);
+          if (currentImageIndex.value >= productImages.value.length) {
+            currentImageIndex.value = Math.max(0, productImages.value.length - 1);
+          }
+        };
+
+        // Handle image upload for multiple images
+        const handleImageUpload = async (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          if (!file.type.startsWith('image/')) {
+            uploadError.value = 'File harus berupa gambar';
+            return;
+          }
+
+          if (file.size > 5 * 1024 * 1024) {
+            uploadError.value = 'Ukuran maksimal 5MB';
+            return;
+          }
+
+          uploadError.value = '';
+          uploadingImage.value = true;
+
+          try {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+              const base64Data = e.target.result;
+              const result = await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).uploadImageBase64({
+                  imageData: base64Data,
+                  fileName: file.name,
+                  productId: editingProduct.value ? editingProduct.value.ProductID : null
+                });
+              });
+
+              uploadingImage.value = false;
+
+              if (result.success) {
+                // Add to productImages array
+                productImages.value.push({
+                  id: result.fileId,
+                  url: result.directLink
+                });
+                // Update form with comma-separated IDs
+                productForm.value.Images = productImages.value.map(img => img.id).join(',');
+              } else {
+                uploadError.value = result.error || 'Gagal upload gambar';
+              }
+            };
+            reader.onerror = () => {
+              uploadingImage.value = false;
+              uploadError.value = 'Gagal membaca file';
+            };
+            reader.readAsDataURL(file);
+          } catch (e) {
+            uploadingImage.value = false;
+            uploadError.value = 'Terjadi kesalahan: ' + e.message;
+          }
+        };
+
         onMounted(() => {
           loadOrders();
           loadProducts();
@@ -685,6 +818,13 @@
           productForm,
           selectedOrder,
           settings,
+          uploadingImage,
+          uploadError,
+          productImages,
+          currentImageIndex,
+          prevImage,
+          nextImage,
+          removeImage,
           updateStatus,
           exportOrders,
           viewOrderDetail,
@@ -695,7 +835,8 @@
           deleteProduct,
           toggleAvailability,
           saveSettings,
-          formatDate
+          formatDate,
+          handleImageUpload
         };
       }
     }).mount('#app');

@@ -7,6 +7,50 @@
  */
 
 /**
+ * Process product images for frontend display
+ * Converts stored image IDs to viewable URLs using Google Drive
+ */
+function processProductImages(imagesField) {
+  if (!imagesField) return [];
+
+  // Check if it's already a JSON array
+  try {
+    const parsed = JSON.parse(imagesField);
+    if (Array.isArray(parsed)) {
+      return parsed.map(img => ({
+        id: img.id || img,
+        url: img.url || getImageUrl(img.id || img)
+      }));
+    }
+  } catch (e) {
+    // Not JSON, try comma-separated
+  }
+
+  // Comma-separated IDs
+  const ids = imagesField.split(',').map(id => id.trim()).filter(id => id);
+  return ids.map(id => ({
+    id: id,
+    url: getImageUrl(id)
+  }));
+}
+
+/**
+ * Get image URL from Drive file ID
+ * Uses docs.google.com format for reliable display
+ */
+function getImageUrl(fileIdOrUrl) {
+  if (!fileIdOrUrl) return '';
+
+  // If it's already a URL, return as-is
+  if (fileIdOrUrl.startsWith('http')) {
+    return fileIdOrUrl;
+  }
+
+  // If it's a file ID, generate the URL
+  return `https://docs.google.com/uc?export=download&id=${fileIdOrUrl}`;
+}
+
+/**
  * Get all available products for customers
  */
 function getProducts(data) {
@@ -37,6 +81,11 @@ function getProducts(data) {
         product.Price = Number(product.Price) || 0;
         product.LeadTimeDays = Number(product.LeadTimeDays) || 0;
         product.Stock = Number(product.Stock) || 0;
+
+        // Process images - convert stored IDs to viewable URLs
+        const processedImages = processProductImages(product.Images);
+        product.Images = processedImages;  // Array of {id, url} objects
+        product.ImageURL = processedImages.length > 0 ? processedImages[0].url : '';  // For backward compatibility
 
         products.push(product);
       }

@@ -7,6 +7,40 @@
  */
 
 /**
+ * Process product images for frontend display
+ */
+function processProductImages(imagesField) {
+  if (!imagesField) return [];
+
+  try {
+    const parsed = JSON.parse(imagesField);
+    if (Array.isArray(parsed)) {
+      return parsed.map(img => ({
+        id: img.id || img,
+        url: img.url || getImageUrl(img.id || img)
+      }));
+    }
+  } catch (e) {
+    // Not JSON, try comma-separated
+  }
+
+  const ids = imagesField.split(',').map(id => id.trim()).filter(id => id);
+  return ids.map(id => ({
+    id: id,
+    url: getImageUrl(id)
+  }));
+}
+
+/**
+ * Get image URL from Drive file ID
+ */
+function getImageUrl(fileIdOrUrl) {
+  if (!fileIdOrUrl) return '';
+  if (fileIdOrUrl.startsWith('http')) return fileIdOrUrl;
+  return `https://docs.google.com/uc?export=download&id=${fileIdOrUrl}`;
+}
+
+/**
  * Get all orders (admin view)
  */
 function getAllOrders(data) {
@@ -156,6 +190,11 @@ function getProductsAdmin(data) {
       product.LeadTimeDays = Number(product.LeadTimeDays) || 0;
       product.Stock = Number(product.Stock) || 0;
 
+      // Process images for display - convert IDs to URLs
+      const processedImages = processProductImages(product.Images);
+      product.Images = processedImages;
+      product.ImageURL = processedImages.length > 0 ? processedImages[0].url : '';
+
       products.push(product);
     }
 
@@ -189,7 +228,7 @@ function addProduct(data) {
       Number(data.Price) || 0,
       Number(data.LeadTimeDays) || 0,
       Number(data.Stock) || 0,
-      data.ImageURL || '',
+      data.Images || '',  // Comma-separated image IDs
       data.IsAvailable !== false,
       data.Tags || ''
     ];
@@ -241,7 +280,7 @@ function updateProduct(data) {
     }
 
     // Update fields
-    const fieldsToUpdate = ['Name', 'Description', 'Category', 'Price', 'LeadTimeDays', 'Stock', 'ImageURL', 'Tags'];
+    const fieldsToUpdate = ['Name', 'Description', 'Category', 'Price', 'LeadTimeDays', 'Stock', 'Images', 'Tags'];
 
     for (const field of fieldsToUpdate) {
       if (data[field] !== undefined) {

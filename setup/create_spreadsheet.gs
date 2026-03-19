@@ -37,7 +37,7 @@ function createSpreadsheet() {
     'Price',
     'LeadTimeDays',
     'Stock',
-    'ImageURL',
+    'Images',
     'IsAvailable',
     'Tags'
   ];
