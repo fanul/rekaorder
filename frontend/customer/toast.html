@@ -1,0 +1,22 @@
+<!-- Toast Notification -->
+<div
+  v-if="toast.show"
+  class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 toast-enter"
+>
+  <div
+    class="px-6 py-3 rounded-full shadow-lg flex items-center gap-2"
+    :class="{
+      'bg-success text-white': toast.type === 'success',
+      'bg-error text-white': toast.type === 'error',
+      'bg-warning text-white': toast.type === 'warning'
+    }"
+  >
+    <svg v-if="toast.type === 'success'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+    </svg>
+    <svg v-if="toast.type === 'error'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+    <span class="font-medium">{{ toast.message }}</span>
+  </div>
+</div>

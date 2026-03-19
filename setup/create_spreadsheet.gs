@@ -23,12 +23,16 @@ function createSpreadsheet() {
   const spreadsheetId = spreadsheet.getId();
   Logger.log('Spreadsheet created with ID: ' + spreadsheetId);
 
-  // Get all sheets and delete default sheet
+  // Get all sheets
   const sheets = spreadsheet.getSheets();
-  spreadsheet.deleteSheet(sheets[0]);
 
-  // Create Products sheet
-  const productsSheet = spreadsheet.insertSheet('Products');
+  // Rename the first sheet to Products
+  const firstSheet = sheets[0];
+  firstSheet.setName('Products');
+
+  // Get reference to renamed sheet
+  const productsSheet = firstSheet;
+  // Set headers for Products
   const productsHeaders = [
     'ProductID',
     'Name',
@@ -116,10 +120,17 @@ function createSpreadsheet() {
     Logger.log('Please manually move the spreadsheet to the desired folder.');
   }
 
+  // Save spreadsheet ID to Properties Service
+  const scriptProperties = PropertiesService.getScriptProperties();
+  scriptProperties.setProperty('SPREADSHEET_ID', spreadsheetId);
+  scriptProperties.setProperty('SPREADSHEET_URL', 'https://docs.google.com/spreadsheets/d/' + spreadsheetId);
+  Logger.log('Spreadsheet ID saved to Properties Service');
+
   // Log final result
   Logger.log('========================================');
   Logger.log('Spreadsheet setup complete!');
   Logger.log('Spreadsheet ID: ' + spreadsheetId);
+  Logger.log('Spreadsheet URL: https://docs.google.com/spreadsheets/d/' + spreadsheetId);
   Logger.log('Sheets created: Products, Orders, Settings');
   Logger.log('========================================');
 

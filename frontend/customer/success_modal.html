@@ -1,0 +1,33 @@
+<!-- Success Modal -->
+<div v-if="showSuccessModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center">
+    <div class="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+    <h3 class="font-display text-2xl font-bold text-charcoal mb-2">Pesanan Diterima!</h3>
+    <p class="text-gray-600 mb-4">Terima kasih sudah memesan, {{ customerName }}! 💛</p>
+    <div class="bg-sand rounded-xl p-4 mb-6">
+      <p class="text-sm text-gray-600">ID Pesanan</p>
+      <p class="font-mono font-bold text-terracotta">{{ lastOrderId }}</p>
+    </div>
+    <p class="text-sm text-gray-500 mb-6">Kami akan menghubungi kamu melalui WhatsApp untuk konfirmasi pesanan.</p>
+
+    <!-- WhatsApp Link -->
+    <a
+      :href="whatsappLink"
+      target="_blank"
+      class="block w-full bg-green-500 text-white font-semibold py-3 rounded-xl shadow-lg hover:bg-green-600 transition-colors btn-press"
+    >
+      Hubungi via WhatsApp
+    </a>
+
+    <button
+      @click="closeSuccessModal"
+      class="w-full mt-3 text-gray-500 font-medium py-2"
+    >
+      Tutup
+    </button>
+  </div>
+</div>

@@ -1,0 +1,46 @@
+<!-- Orders Tab -->
+<div v-if="currentTab === 'orders'" class="fixed inset-0 bg-cream z-40 pt-16 pb-20 overflow-y-auto">
+  <div class="max-w-lg mx-auto px-4 py-4">
+    <h2 class="font-display text-2xl font-bold text-charcoal mb-6">Pesanan Saya</h2>
+
+    <div v-if="myOrders.length === 0" class="text-center py-12">
+      <div class="w-24 h-24 bg-sand rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-rose" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+      </div>
+      <h3 class="font-display text-lg font-semibold text-charcoal mb-2">Belum Ada Pesanan</h3>
+      <p class="text-gray-500 mb-4">Yuk, pesan makanan favoritmu!</p>
+      <button @click="currentTab = 'home'" class="bg-terracotta text-white px-6 py-3 rounded-xl font-medium">
+        Browse Menu
+      </button>
+    </div>
+
+    <div v-else class="space-y-4">
+      <div v-for="order in myOrders" :key="order.OrderID" class="bg-white rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="font-mono text-sm text-gray-500">{{ order.OrderID }}</span>
+          <span
+            class="px-3 py-1 rounded-full text-xs font-medium"
+            :class="{
+              'bg-blue-100 text-blue-700': order.Status === 'Baru',
+              'bg-yellow-100 text-yellow-700': order.Status === 'Dikonfirmasi',
+              'bg-purple-100 text-purple-700': order.Status === 'Diproses',
+              'bg-orange-100 text-orange-700': order.Status === 'Siap',
+              'bg-green-100 text-green-700': order.Status === 'Selesai',
+              'bg-red-100 text-red-700': order.Status === 'Batal'
+            }"
+          >
+            {{ order.Status }}
+          </span>
+        </div>
+        <div class="text-sm text-gray-600 mb-2">
+          {{ formatDate(order.Timestamp) }}
+        </div>
+        <div class="font-bold text-terracotta">
+          Rp {{ Number(order.TotalAmount).toLocaleString('id-ID') }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

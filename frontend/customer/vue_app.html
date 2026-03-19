@@ -1,0 +1,286 @@
+<script>
+  const { createApp, ref, computed, onMounted, watch } = Vue;
+
+  createApp({
+    setup() {
+      // State
+      const loading = ref(true);
+      const products = ref([]);
+      const cart = ref([]);
+      const currentTab = ref('home');
+      const selectedCategory = ref('all');
+      const selectedProduct = ref(null);
+      const quantity = ref(1);
+      const showSearch = ref(false);
+      const searchQuery = ref('');
+      const categories = ref(['Makanan', 'Minuman', 'Snack', 'Dessert']);
+
+      // Customer data
+      const customerName = ref('');
+      const customerPhone = ref('');
+      const customerAddress = ref('');
+      const deliveryDate = ref('');
+      const paymentMethod = ref('Transfer Bank');
+
+      // Order state
+      const myOrders = ref([]);
+      const submitting = ref(false);
+      const deliveryFee = ref(0);
+      const paymentMethods = ref(['Transfer Bank', 'COD', 'E-Wallet']);
+
+      // UI state
+      const toast = ref({ show: false, message: '', type: 'success' });
+      const showSuccessModal = ref(false);
+      const lastOrderId = ref('');
+
+      // Computed
+      const filteredProducts = computed(() => {
+        let result = products.value;
+        if (selectedCategory.value !== 'all') {
+          result = result.filter(p => p.Category === selectedCategory.value);
+        }
+        if (searchQuery.value) {
+          const query = searchQuery.value.toLowerCase();
+          result = result.filter(p =>
+            p.Name.toLowerCase().includes(query) ||
+            p.Description.toLowerCase().includes(query)
+          );
+        }
+        return result;
+      });
+
+      const cartSubtotal = computed(() => {
+        return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      });
+
+      const cartTotal = computed(() => {
+        return cartSubtotal.value + deliveryFee.value;
+      });
+
+      const minDeliveryDate = computed(() => {
+        const today = new Date();
+        today.setDate(today.getDate() + 1);
+        return today.toISOString().split('T')[0];
+      });
+
+      const isCartValid = computed(() => {
+        return cart.value.length > 0 &&
+               customerName.value.trim() &&
+               customerPhone.value.trim() &&
+               customerAddress.value.trim() &&
+               deliveryDate.value &&
+               paymentMethod.value;
+      });
+
+      const whatsappLink = computed(() => {
+        const message = `Halo RekaOrder, saya ${customerName.value} ingin konfirmasi pesanan saya dengan ID: ${lastOrderId.value}`;
+        return `https://wa.me/?text=${encodeURIComponent(message)}`;
+      });
+
+      // Methods
+      const loadProducts = async () => {
+        loading.value = true;
+        try {
+          const response = await google.script.run.withSuccessHandler(r => {
+            if (r.success) {
+              products.value = r.products;
+            }
+            loading.value = false;
+          }).getProducts({});
+        } catch (error) {
+          console.error('Error loading products:', error);
+          loading.value = false;
+          showToast('Gagal memuat produk', 'error');
+        }
+      };
+
+      const loadSettings = async () => {
+        try {
+          await google.script.run.withSuccessHandler(r => {
+            deliveryFee.value = Number(r.DELIVERY_FEE) || 0;
+          }).getSettings();
+        } catch (error) {
+          console.error('Error loading settings:', error);
+        }
+      };
+
+      const loadCart = () => {
+        const saved = localStorage.getItem('rekaorder_cart');
+        if (saved) {
+          cart.value = JSON.parse(saved);
+        }
+      };
+
+      const saveCart = () => {
+        localStorage.setItem('rekaorder_cart', JSON.stringify(cart.value));
+      };
+
+      const openProductModal = (product) => {
+        selectedProduct.value = product;
+        quantity.value = 1;
+      };
+
+      const closeProductModal = () => {
+        selectedProduct.value = null;
+      };
+
+      const increaseQuantity = () => {
+        if (quantity.value < selectedProduct.value.Stock) {
+          quantity.value++;
+        }
+      };
+
+      const decreaseQuantity = () => {
+        if (quantity.value > 1) {
+          quantity.value--;
+        }
+      };
+
+      const addToCart = () => {
+        const item = {
+          productId: selectedProduct.value.ProductID,
+          name: selectedProduct.value.Name,
+          price: selectedProduct.value.Price,
+          quantity: quantity.value,
+          ImageURL: selectedProduct.value.ImageURL,
+          LeadTimeDays: selectedProduct.value.LeadTimeDays
+        };
+
+        const existing = cart.value.find(c => c.productId === item.productId);
+        if (existing) {
+          existing.quantity += quantity.value;
+        } else {
+          cart.value.push(item);
+        }
+
+        saveCart();
+        closeProductModal();
+        showToast('Ditambahkan ke keranjang!', 'success');
+        currentTab.value = 'cart';
+      };
+
+      const updateCartQuantity = (index, newQty) => {
+        if (newQty <= 0) {
+          cart.value.splice(index, 1);
+        } else {
+          cart.value[index].quantity = newQty;
+        }
+        saveCart();
+      };
+
+      const removeFromCart = (index) => {
+        cart.value.splice(index, 1);
+        saveCart();
+      };
+
+      const submitOrder = async () => {
+        if (!isCartValid.value) {
+          showToast('Mohon lengkapi semua data', 'error');
+          return;
+        }
+
+        submitting.value = true;
+
+        try {
+          const result = await new Promise((resolve, reject) => {
+            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).submitOrder({
+              customerName: customerName.value,
+              customerPhone: customerPhone.value,
+              customerAddress: customerAddress.value,
+              deliveryDate: deliveryDate.value,
+              paymentMethod: paymentMethod.value,
+              cart: cart.value
+            });
+          });
+
+          if (result.success) {
+            lastOrderId.value = result.orderId;
+            cart.value = [];
+            saveCart();
+            showSuccessModal.value = true;
+            myOrders.value.unshift({
+              OrderID: result.orderId,
+              Timestamp: new Date().toISOString(),
+              TotalAmount: result.totalAmount,
+              Status: 'Baru'
+            });
+          } else {
+            showToast(result.error || 'Gagal submit pesanan', 'error');
+          }
+        } catch (error) {
+          console.error('Error submitting order:', error);
+          showToast('Terjadi kesalahan', 'error');
+        } finally {
+          submitting.value = false;
+        }
+      };
+
+      const closeSuccessModal = () => {
+        showSuccessModal.value = false;
+        currentTab.value = 'orders';
+        customerName.value = '';
+        customerPhone.value = '';
+        customerAddress.value = '';
+        deliveryDate.value = '';
+      };
+
+      const showToast = (message, type = 'success') => {
+        toast.value = { show: true, message, type };
+        setTimeout(() => {
+          toast.value.show = false;
+        }, 3000);
+      };
+
+      const toggleSearch = () => {
+        showSearch.value = !showSearch.value;
+        if (!showSearch.value) {
+          searchQuery.value = '';
+        }
+      };
+
+      const performSearch = () => {};
+
+      const clearSearch = () => {
+        searchQuery.value = '';
+      };
+
+      const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      };
+
+      const handleImageError = (event) => {
+        event.target.style.display = 'none';
+      };
+
+      watch(cart, saveCart, { deep: true });
+
+      onMounted(() => {
+        loadProducts();
+        loadSettings();
+        loadCart();
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        deliveryDate.value = tomorrow.toISOString().split('T')[0];
+      });
+
+      return {
+        loading, products, cart, currentTab, selectedCategory, selectedProduct,
+        quantity, showSearch, searchQuery, categories, customerName, customerPhone,
+        customerAddress, deliveryDate, paymentMethod, paymentMethods, myOrders,
+        submitting, deliveryFee, toast, showSuccessModal, lastOrderId,
+        filteredProducts, cartSubtotal, cartTotal, minDeliveryDate, isCartValid,
+        whatsappLink, openProductModal, closeProductModal, increaseQuantity,
+        decreaseQuantity, addToCart, updateCartQuantity, removeFromCart,
+        submitOrder, closeSuccessModal, showToast, toggleSearch, performSearch,
+        clearSearch, formatDate, handleImageError
+      };
+    }
+  }).mount('#app');
+</script>

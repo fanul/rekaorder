@@ -1,49 +1,40 @@
 /**
  * RekaOrder - Main Entry Point
- * Handles routing for frontend and API endpoints
+ * Routes requests to appropriate handlers
  *
  * @author RekaOrder
- * @version 1.0.0
+ * @version 2.0.0
  */
 
-// Configuration - Replace with your Spreadsheet ID
-const CONFIG = {
-  SPREADSHEET_ID: 'YOUR_SPREADSHEET_ID_HERE',
-  SHEETS: {
-    PRODUCTS: 'Products',
-    ORDERS: 'Orders',
-    SETTINGS: 'Settings'
-  }
-};
+// Configuration loaded from shared/config.gs
 
 /**
- * Main doGet handler - serves the PWA
+ * Main doGet - serves the PWA
  */
 function doGet(e) {
   const path = e.parameter.path || 'customer';
-  const mode = e.parameter.mode || 'view';
 
-  // Route to appropriate HTML
   if (path === 'admin') {
-    return HtmlService.createTemplateFromFile('frontend/admin/dashboard')
-      .evaluate()
-      .setTitle('RekaOrder - Admin Dashboard')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    return serveHtml('frontend/admin/dashboard', 'RekaOrder - Admin Dashboard');
   }
 
-  // Default to customer PWA
-  return HtmlService.createTemplateFromFile('frontend/customer/index_cart_order')
-    .evaluate()
-    .setTitle('RekaOrder - Pre Order Makanan')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
-    .addMetaTag('theme-color', '#C0622F')
-    .addMetaTag('description', 'RekaOrder - Pre Order Makanan Favoritmu');
+  return serveHtml('frontend/customer/shell', 'RekaOrder - Pre Order');
 }
 
 /**
- * doPost handler for API calls
+ * Serve HTML template
+ */
+function serveHtml(templateName, title) {
+  return HtmlService.createTemplateFromFile(templateName)
+    .evaluate()
+    .setTitle(title)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
+    .addMetaTag('theme-color', '#C0622F');
+}
+
+/**
+ * doPost - API routing
  */
 function doPost(e) {
   const postData = JSON.parse(e.postData.contents);
@@ -53,7 +44,7 @@ function doPost(e) {
     let result;
 
     switch (action) {
-      // Customer actions
+      // Customer APIs
       case 'getProducts':
         result = getProducts(postData);
         break;
@@ -64,7 +55,7 @@ function doPost(e) {
         result = getSettings();
         break;
 
-      // Admin actions
+      // Admin APIs
       case 'getAllOrders':
         result = getAllOrders(postData);
         break;
@@ -90,10 +81,13 @@ function doPost(e) {
         result = exportOrdersCSV(postData);
         break;
       case 'updateSettings':
-        result = updateSettings(postData);
+        result = updateSetting(postData.key, postData.value);
+        break;
+      case 'getOrderStats':
+        result = getOrderStats();
         break;
 
-      // Image upload
+      // Image APIs
       case 'uploadImage':
         result = uploadImageBase64(postData);
         break;
@@ -101,113 +95,34 @@ function doPost(e) {
         result = deleteImage(postData.fileId);
         break;
 
+      // Config APIs
+      case 'setSpreadsheetId':
+        result = setSpreadsheetId(postData.spreadsheetId);
+        break;
+      case 'getConfigStatus':
+        result = getConfigStatus();
+        break;
+
       default:
         result = { success: false, error: 'Unknown action: ' + action };
     }
 
-    return ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse(result);
 
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      error: error.message
-    })).setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse({ success: false, error: error.message });
   }
 }
 
 /**
- * Include HTML content from a file
+ * Include HTML file content
  */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /**
- * Get spreadsheet instance
- */
-function getSpreadsheet() {
-  return SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-}
-
-/**
- * Get a sheet by name
- */
-function getSheet(sheetName) {
-  const spreadsheet = getSpreadsheet();
-  return spreadsheet.getSheetByName(sheetName);
-}
-
-/**
- * Generate unique ID
- */
-function generateId(prefix) {
-  const timestamp = new Date().getTime().toString(36);
-  const random = Math.random().toString(36).substring(2, 8);
-  return prefix + '_' + timestamp + '_' + random;
-}
-
-/**
- * Format date for display
- */
-function formatDate(date) {
-  return Utilities.formatDate(new Date(date), 'Asia/Jakarta', 'dd MMM yyyy, HH:mm');
-}
-
-/**
- * Format currency
- */
-function formatCurrency(amount) {
-  return 'Rp ' + Number(amount).toLocaleString('id-ID');
-}
-
-/**
- * Get setting value by key
- */
-function getSetting(key) {
-  const sheet = getSheet(CONFIG.SHEETS.SETTINGS);
-  const data = sheet.getDataRange().getValues();
-
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === key) {
-      return data[i][1];
-    }
-  }
-  return null;
-}
-
-/**
- * Get all settings as object
- */
-function getSettings() {
-  const sheet = getSheet(CONFIG.SHEETS.SETTINGS);
-  const data = sheet.getDataRange().getValues();
-  const settings = {};
-
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0]) {
-      settings[data[i][0]] = data[i][1];
-    }
-  }
-
-  return settings;
-}
-
-/**
- * Validate required fields
- */
-function validateRequired(data, fields) {
-  const missing = [];
-  for (const field of fields) {
-    if (!data[field] || data[field].toString().trim() === '') {
-      missing.push(field);
-    }
-  }
-  return missing;
-}
-
-/**
- * Send JSON response
+ * JSON response helper
  */
 function jsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
