@@ -1,0 +1,9 @@
+{
+  "timeZone": "Asia/Jakarta",
+  "exceptionLogging": "CLOUD",
+  "runtimeVersion": "V8",
+  "webapp": {
+    "access": "ANYONE",
+    "executeAs": "DEPLOYER"
+  }
+}

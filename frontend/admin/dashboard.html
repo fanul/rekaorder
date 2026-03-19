@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RekaOrder - Admin Dashboard</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: '#FDF6EC',
+            terracotta: '#C0622F',
+            'terracotta-dark': '#A04F20',
+            rose: '#E8A598',
+            gold: '#D4A853',
+            sand: '#F5E6D3',
+            charcoal: '#2D2D2D'
+          },
+          fontFamily: {
+            display: ['Playfair Display', 'serif'],
+            body: ['Plus Jakarta Sans', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background: #F5F5F5;
+    }
+    .sidebar-item.active {
+      background: linear-gradient(135deg, #C0622F 0%, #E8A598 100%);
+      color: white;
+    }
+  </style>
+</head>
+<body class="font-body text-charcoal">
+  <div id="app" class="min-h-screen flex">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white shadow-lg hidden lg:flex flex-col">
+      <div class="p-6 border-b border-sand">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-terracotta to-rose rounded-xl flex items-center justify-center">
+            <span class="text-white font-display font-bold text-lg">R</span>
+          </div>
+          <div>
+            <h1 class="font-display font-semibold text-lg text-terracotta">RekaOrder</h1>
+            <p class="text-xs text-gray-500">Admin Panel</p>
+          </div>
+        </div>
+      </div>
+
+      <nav class="flex-1 p-4 space-y-2">
+        <button
+          @click="currentView = 'orders'"
+          :class="['sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all', currentView === 'orders' ? 'active' : 'hover:bg-sand text-gray-600']"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <span class="font-medium">Pesanan</span>
+        </button>
+
+        <button
+          @click="currentView = 'products'"
+          :class="['sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all', currentView === 'products' ? 'active' : 'hover:bg-sand text-gray-600']"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          <span class="font-medium">Produk</span>
+        </button>
+
+        <button
+          @click="currentView = 'settings'"
+          :class="['sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all', currentView === 'settings' ? 'active' : 'hover:bg-sand text-gray-600']"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span class="font-medium">Pengaturan</span>
+        </button>
+      </nav>
+
+      <div class="p-4 border-t border-sand">
+        <a href="?= " class="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-sand rounded-xl transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          <span class="font-medium">Lihat Toko</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col">
+      <!-- Header -->
+      <header class="bg-white shadow-sm border-b border-sand px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="font-display text-xl font-semibold">
+              {{ currentView === 'orders' ? 'Kelola Pesanan' : currentView === 'products' ? 'Kelola Produk' : 'Pengaturan' }}
+            </h2>
+            <p class="text-sm text-gray-500">{{ formatDate(new Date()) }}</p>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="bg-sand px-4 py-2 rounded-xl">
+              <span class="text-sm text-gray-600">Total Pendapatan:</span>
+              <span class="font-bold text-terracotta ml-2">Rp {{ stats.totalRevenue.toLocaleString('id-ID') }}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="flex-1 p-6 overflow-auto">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+          <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-500">Total Pesanan</p>
+                <p class="text-2xl font-bold text-charcoal">{{ stats.total }}</p>
+              </div>
+              <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-500">Pesanan Baru</p>
+                <p class="text-2xl font-bold text-blue-600">{{ stats.baru }}</p>
+              </div>
+              <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-500">Sedang Diproses</p>
+                <p class="text-2xl font-bold text-purple-600">{{ stats.diproses }}</p>
+              </div>
+              <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-500">Selesai</p>
+                <p class="text-2xl font-bold text-green-600">{{ stats.selesai }}</p>
+              </div>
+              <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orders View -->
+        <div v-if="currentView === 'orders'" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-sand flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <select v-model="statusFilter" class="px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+                <option value="">Semua Status</option>
+                <option value="Baru">Baru</option>
+                <option value="Dikonfirmasi">Dikonfirmasi</option>
+                <option value="Diproses">Diproses</option>
+                <option value="Siap">Siap</option>
+                <option value="Selesai">Selesai</option>
+                <option value="Batal">Batal</option>
+              </select>
+            </div>
+            <button @click="exportOrders" class="px-4 py-2 bg-terracotta text-white rounded-lg font-medium hover:bg-terracotta-dark transition-colors">
+              Export CSV
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-sand">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">ID Pesanan</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Customer</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Total</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-sand">
+                <tr v-for="order in filteredOrders" :key="order.OrderID" class="hover:bg-cream/50">
+                  <td class="px-4 py-3">
+                    <span class="font-mono text-sm">{{ order.OrderID }}</span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <div>
+                      <p class="font-medium">{{ order.CustomerName }}</p>
+                      <p class="text-sm text-gray-500">{{ order.CustomerPhone }}</p>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 font-semibold text-terracotta">
+                    Rp {{ Number(order.TotalAmount).toLocaleString('id-ID') }}
+                  </td>
+                  <td class="px-4 py-3">
+                    <select
+                      :value="order.Status"
+                      @change="updateStatus(order.OrderID, $event.target.value)"
+                      class="px-3 py-1 rounded-full text-sm font-medium border-0 cursor-pointer"
+                      :class="{
+                        'bg-blue-100 text-blue-700': order.Status === 'Baru',
+                        'bg-yellow-100 text-yellow-700': order.Status === 'Dikonfirmasi',
+                        'bg-purple-100 text-purple-700': order.Status === 'Diproses',
+                        'bg-orange-100 text-orange-700': order.Status === 'Siap',
+                        'bg-green-100 text-green-700': order.Status === 'Selesai',
+                        'bg-red-100 text-red-700': order.Status === 'Batal'
+                      }"
+                    >
+                      <option value="Baru">Baru</option>
+                      <option value="Dikonfirmasi">Dikonfirmasi</option>
+                      <option value="Diproses">Diproses</option>
+                      <option value="Siap">Siap</option>
+                      <option value="Selesai">Selesai</option>
+                      <option value="Batal">Batal</option>
+                    </select>
+                  </td>
+                  <td class="px-4 py-3">
+                    <button @click="viewOrderDetail(order)" class="text-terracotta hover:underline text-sm font-medium">
+                      Detail
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Products View -->
+        <div v-if="currentView === 'products'" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-sand flex items-center justify-between">
+            <h3 class="font-semibold">Daftar Produk</h3>
+            <button @click="showAddProduct = true" class="px-4 py-2 bg-terracotta text-white rounded-lg font-medium hover:bg-terracotta-dark transition-colors">
+              + Tambah Produk
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-sand">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Produk</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Kategori</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Harga</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Stok</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-sand">
+                <tr v-for="product in products" :key="product.ProductID" class="hover:bg-cream/50">
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-12 h-12 bg-sand rounded-lg overflow-hidden">
+                        <img v-if="product.ImageURL" :src="product.ImageURL" class="w-full h-full object-cover">
+                      </div>
+                      <div>
+                        <p class="font-medium">{{ product.Name }}</p>
+                        <p class="text-xs text-gray-500">{{ product.Description }}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-sm">{{ product.Category }}</td>
+                  <td class="px-4 py-3 font-semibold text-terracotta">
+                    Rp {{ Number(product.Price).toLocaleString('id-ID') }}
+                  </td>
+                  <td class="px-4 py-3">{{ product.Stock }}</td>
+                  <td class="px-4 py-3">
+                    <button
+                      @click="toggleAvailability(product.ProductID)"
+                      class="px-3 py-1 rounded-full text-xs font-medium"
+                      :class="product.IsAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                    >
+                      {{ product.IsAvailable ? 'Aktif' : 'Nonaktif' }}
+                    </button>
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="flex gap-2">
+                      <button @click="editProduct(product)" class="text-blue-600 hover:underline text-sm">Edit</button>
+                      <button @click="deleteProduct(product.ProductID)" class="text-red-600 hover:underline text-sm">Hapus</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Settings View -->
+        <div v-if="currentView === 'settings'" class="bg-white rounded-2xl shadow-sm p-6">
+          <h3 class="font-semibold mb-6">Pengaturan Toko</h3>
+
+          <div class="space-y-4 max-w-xl">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nama Toko</label>
+              <input v-model="settings.STORE_NAME" type="text" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Minimum Pesanan (Rp)</label>
+              <input v-model="settings.MIN_ORDER_AMOUNT" type="number" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Biaya Pengiriman (Rp)</label>
+              <input v-model="settings.DELIVERY_FEE" type="number" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+            </div>
+            <div class="pt-4 border-t">
+              <h4 class="font-medium mb-4">Integrasi WhatsApp (WAHA)</h4>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">WAHA URL</label>
+                  <input v-model="settings.WAHA_URL" type="text" placeholder="https://your-waha-instance.com" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">WAHA Session</label>
+                  <input v-model="settings.WAHA_SESSION" type="text" placeholder="default" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Nomor Admin (untuk notifikasi)</label>
+                  <input v-model="settings.ADMIN_PHONE" type="text" placeholder="6281234567890" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+                </div>
+              </div>
+            </div>
+            <button @click="saveSettings" class="px-6 py-2 bg-terracotta text-white rounded-lg font-medium hover:bg-terracotta-dark transition-colors">
+              Simpan Pengaturan
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Add/Edit Product Modal -->
+    <div v-if="showAddProduct" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-sand">
+          <h3 class="font-display text-xl font-semibold">{{ editingProduct ? 'Edit Produk' : 'Tambah Produk' }}</h3>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
+            <input v-model="productForm.Name" type="text" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+            <textarea v-model="productForm.Description" rows="2" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+              <select v-model="productForm.Category" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+                <option>Makanan</option>
+                <option>Minuman</option>
+                <option>Snack</option>
+                <option>Dessert</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Harga (Rp)</label>
+              <input v-model="productForm.Price" type="number" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Lead Time (Hari)</label>
+              <input v-model="productForm.LeadTimeDays" type="number" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Stok</label>
+              <input v-model="productForm.Stock" type="number" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">URL Gambar</label>
+            <input v-model="productForm.ImageURL" type="url" placeholder="https://..." class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tags (pisahkan dengan koma)</label>
+            <input v-model="productForm.Tags" type="text" placeholder="best, new, popular" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+          </div>
+        </div>
+        <div class="p-6 border-t border-sand flex justify-end gap-3">
+          <button @click="closeProductModal" class="px-4 py-2 text-gray-600 hover:bg-sand rounded-lg transition-colors">Batal</button>
+          <button @click="saveProduct" class="px-4 py-2 bg-terracotta text-white rounded-lg font-medium hover:bg-terracotta-dark transition-colors">
+            {{ editingProduct ? 'Update' : 'Simpan' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div v-if="selectedOrder" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl w-full max-w-lg">
+        <div class="p-6 border-b border-sand flex justify-between items-center">
+          <h3 class="font-display text-xl font-semibold">Detail Pesanan</h3>
+          <button @click="selectedOrder = null" class="text-gray-500 hover:text-gray-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <p class="text-sm text-gray-500">ID Pesanan</p>
+            <p class="font-mono font-medium">{{ selectedOrder.OrderID }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Customer</p>
+            <p class="font-medium">{{ selectedOrder.CustomerName }}</p>
+            <p class="text-sm">{{ selectedOrder.CustomerPhone }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Alamat</p>
+            <p>{{ selectedOrder.CustomerAddress }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Item Pesanan</p>
+            <div class="bg-sand rounded-lg p-3 mt-1">
+              <div v-for="(item, idx) in parseCart(selectedOrder.CartJSON)" :key="idx" class="flex justify-between py-1">
+                <span>{{ item.name }} x{{ item.quantity }}</span>
+                <span class="font-medium">Rp {{ item.subtotal.toLocaleString('id-ID') }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-between pt-2 border-t">
+            <span class="font-semibold">Total</span>
+            <span class="font-bold text-terracotta text-lg">Rp {{ Number(selectedOrder.TotalAmount).toLocaleString('id-ID') }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const currentView = ref('orders');
+        const orders = ref([]);
+        const products = ref([]);
+        const statusFilter = ref('');
+        const stats = ref({ total: 0, baru: 0, diproses: 0, selesai: 0, totalRevenue: 0 });
+        const showAddProduct = ref(false);
+        const editingProduct = ref(null);
+        const selectedOrder = ref(null);
+        const settings = ref({
+          STORE_NAME: '',
+          MIN_ORDER_AMOUNT: '0',
+          DELIVERY_FEE: '0',
+          WAHA_URL: '',
+          WAHA_SESSION: 'default',
+          ADMIN_PHONE: ''
+        });
+
+        const productForm = ref({
+          Name: '',
+          Description: '',
+          Category: 'Makanan',
+          Price: 0,
+          LeadTimeDays: 0,
+          Stock: 0,
+          ImageURL: '',
+          Tags: ''
+        });
+
+        const filteredOrders = computed(() => {
+          if (!statusFilter.value) return orders.value;
+          return orders.value.filter(o => o.Status === statusFilter.value);
+        });
+
+        const loadOrders = async () => {
+          try {
+            const result = await new Promise((resolve, reject) => {
+              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getAllOrders({});
+            });
+            if (result.success) {
+              orders.value = result.orders;
+              updateStats();
+            }
+          } catch (e) {
+            console.error('Error loading orders:', e);
+          }
+        };
+
+        const loadProducts = async () => {
+          try {
+            const result = await new Promise((resolve, reject) => {
+              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getProductsAdmin({});
+            });
+            if (result.success) {
+              products.value = result.products;
+            }
+          } catch (e) {
+            console.error('Error loading products:', e);
+          }
+        };
+
+        const loadSettings = async () => {
+          try {
+            const result = await new Promise((resolve, reject) => {
+              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getSettings();
+            });
+            settings.value = { ...settings.value, ...result };
+          } catch (e) {
+            console.error('Error loading settings:', e);
+          }
+        };
+
+        const updateStats = () => {
+          stats.value = orders.value.reduce((acc, o) => {
+            acc.total++;
+            if (o.Status === 'Baru') acc.baru++;
+            if (['Dikonfirmasi', 'Diproses', 'Siap'].includes(o.Status)) acc.diproses++;
+            if (o.Status === 'Selesai') {
+              acc.selesai++;
+              acc.totalRevenue += Number(o.TotalAmount) || 0;
+            }
+            return acc;
+          }, { total: 0, baru: 0, diproses: 0, selesai: 0, totalRevenue: 0 });
+        };
+
+        const updateStatus = async (orderId, newStatus) => {
+          try {
+            await new Promise((resolve, reject) => {
+              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).updateOrderStatus({
+                orderId: orderId,
+                status: newStatus
+              });
+            });
+            const order = orders.value.find(o => o.OrderID === orderId);
+            if (order) order.Status = newStatus;
+            updateStats();
+          } catch (e) {
+            console.error('Error updating status:', e);
+          }
+        };
+
+        const exportOrders = async () => {
+          try {
+            const result = await new Promise((resolve, reject) => {
+              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).exportOrdersCSV({});
+            });
+            if (result.success && result.fileUrl) {
+              window.open(result.fileUrl, '_blank');
+            }
+          } catch (e) {
+            console.error('Error exporting:', e);
+          }
+        };
+
+        const viewOrderDetail = (order) => {
+          selectedOrder.value = order;
+        };
+
+        const parseCart = (cartJson) => {
+          try {
+            return JSON.parse(cartJson);
+          } catch {
+            return [];
+          }
+        };
+
+        const editProduct = (product) => {
+          editingProduct.value = product;
+          productForm.value = { ...product };
+          showAddProduct.value = true;
+        };
+
+        const closeProductModal = () => {
+          showAddProduct.value = false;
+          editingProduct.value = null;
+          productForm.value = { Name: '', Description: '', Category: 'Makanan', Price: 0, LeadTimeDays: 0, Stock: 0, ImageURL: '', Tags: '' };
+        };
+
+        const saveProduct = async () => {
+          try {
+            if (editingProduct.value) {
+              await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).updateProduct({
+                  ProductID: editingProduct.value.ProductID,
+                  ...productForm.value
+                });
+              });
+            } else {
+              await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).addProduct(productForm.value);
+              });
+            }
+            closeProductModal();
+            loadProducts();
+          } catch (e) {
+            console.error('Error saving product:', e);
+          }
+        };
+
+        const deleteProduct = async (productId) => {
+          if (!confirm('Yakin ingin menghapus produk ini?')) return;
+          try {
+            await new Promise((resolve, reject) => {
+              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).deleteProduct({ ProductID: productId });
+            });
+            loadProducts();
+          } catch (e) {
+            console.error('Error deleting product:', e);
+          }
+        };
+
+        const toggleAvailability = async (productId) => {
+          try {
+            await new Promise((resolve, reject) => {
+              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).toggleProductAvailability({ ProductID: productId });
+            });
+            loadProducts();
+          } catch (e) {
+            console.error('Error toggling availability:', e);
+          }
+        };
+
+        const saveSettings = async () => {
+          try {
+            for (const [key, value] of Object.entries(settings.value)) {
+              await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).updateSettings({ key, value });
+              });
+            }
+            alert('Pengaturan tersimpan!');
+          } catch (e) {
+            console.error('Error saving settings:', e);
+          }
+        };
+
+        const formatDate = (date) => {
+          return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        };
+
+        onMounted(() => {
+          loadOrders();
+          loadProducts();
+          loadSettings();
+        });
+
+        return {
+          currentView,
+          orders,
+          products,
+          statusFilter,
+          filteredOrders,
+          stats,
+          showAddProduct,
+          editingProduct,
+          productForm,
+          selectedOrder,
+          settings,
+          updateStatus,
+          exportOrders,
+          viewOrderDetail,
+          parseCart,
+          editProduct,
+          closeProductModal,
+          saveProduct,
+          deleteProduct,
+          toggleAvailability,
+          saveSettings,
+          formatDate
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

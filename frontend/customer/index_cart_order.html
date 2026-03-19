@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#C0622F">
+  <meta name="description" content="RekaOrder - Pre Order Makanan Favoritmu">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="RekaOrder">
+
+  <title>RekaOrder - Pre Order</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: '#FDF6EC',
+            terracotta: '#C0622F',
+            'terracotta-dark': '#A04F20',
+            rose: '#E8A598',
+            gold: '#D4A853',
+            'gold-light': '#E8C87A',
+            sand: '#F5E6D3',
+            charcoal: '#2D2D2D',
+            success: '#4CAF50',
+            warning: '#FF9800',
+            error: '#F44336'
+          },
+          fontFamily: {
+            display: ['Playfair Display', 'serif'],
+            body: ['Plus Jakarta Sans', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="?= pwa_manifest">
+
+  <!-- Custom Styles -->
+  <?!= include('frontend/customer/style'); ?>
+
+  <style>
+    /* Loading skeleton animation */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    /* Smooth scrolling */
+    html {
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Hide scrollbar but keep functionality */
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Bottom safe area */
+    .safe-bottom {
+      padding-bottom: env(safe-area-inset-bottom, 20px);
+    }
+
+    /* Toast animations */
+    @keyframes slideInUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .toast-enter {
+      animation: slideInUp 0.3s ease-out;
+    }
+
+    /* Button press effect */
+    .btn-press:active {
+      transform: scale(0.97);
+    }
+
+    /* Card hover effect */
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(192, 98, 47, 0.15);
+    }
+
+    /* Badge glow */
+    .badge-glow {
+      box-shadow: 0 0 10px rgba(232, 165, 152, 0.5);
+    }
+
+    /* Bottom nav active */
+    .nav-active {
+      position: relative;
+    }
+    .nav-active::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 24px;
+      height: 3px;
+      background: #C0622F;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body class="bg-cream font-body text-charcoal antialiased">
+  <div id="app" class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+      <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-10 h-10 bg-gradient-to-br from-terracotta to-rose rounded-xl flex items-center justify-center">
+            <span class="text-white font-display font-bold text-lg">R</span>
+          </div>
+          <div>
+            <h1 class="font-display font-semibold text-lg text-terracotta">RekaOrder</h1>
+            <p class="text-xs text-gray-500">Pre Order Makanan</p>
+          </div>
+        </div>
+        <button @click="toggleSearch" class="p-2 rounded-full hover:bg-sand transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Search Bar -->
+      <div v-if="showSearch" class="border-t border-sand px-4 py-3 bg-white">
+        <div class="relative">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Cari makanan favoritmu..."
+            class="w-full px-4 py-3 pl-12 bg-sand rounded-xl border-0 focus:ring-2 focus:ring-terracotta focus:outline-none"
+            @keyup.enter="performSearch"
+          >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <button v-if="searchQuery" @click="clearSearch" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 pb-20">
+      <div class="max-w-lg mx-auto px-4 py-4">
+
+        <!-- Categories -->
+        <div class="mb-6">
+          <div class="flex gap-3 overflow-x-auto hide-scrollbar pb-2 -mx-4 px-4">
+            <button
+              @click="selectedCategory = 'all'"
+              :class="[
+                'px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all btn-press',
+                selectedCategory === 'all'
+                  ? 'bg-terracotta text-white shadow-lg'
+                  : 'bg-white text-gray-600 border border-sand hover:border-terracotta'
+              ]"
+            >
+              Semua
+            </button>
+            <button
+              v-for="category in categories"
+              :key="category"
+              @click="selectedCategory = category"
+              :class="[
+                'px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all btn-press',
+                selectedCategory === category
+                  ? 'bg-terracotta text-white shadow-lg'
+                  : 'bg-white text-gray-600 border border-sand hover:border-terracotta'
+              ]"
+            >
+              {{ category }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="space-y-4">
+          <div v-for="i in 4" :key="i" class="bg-white rounded-2xl p-4 skeleton h-32"></div>
+        </div>
+
+        <!-- Products Grid -->
+        <div v-else-if="filteredProducts.length > 0" class="grid grid-cols-2 gap-4">
+          <div
+            v-for="product in filteredProducts"
+            :key="product.ProductID"
+            class="bg-white rounded-2xl overflow-hidden shadow-sm card-hover"
+            @click="openProductModal(product)"
+          >
+            <!-- Product Image -->
+            <div class="relative aspect-square bg-sand">
+              <img
+                v-if="product.ImageURL"
+                :src="product.ImageURL"
+                :alt="product.Name"
+                class="w-full h-full object-cover"
+                @error="handleImageError($event)"
+              >
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-rose/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+
+              <!-- Badges -->
+              <div class="absolute top-2 left-2 flex flex-col gap-1">
+                <span v-if="product.LeadTimeDays > 0" class="bg-rose text-white text-xs px-2 py-1 rounded-full font-medium badge-glow">
+                  H+{{ product.LeadTimeDays }}
+                </span>
+                <span v-if="product.Tags && product.Tags.includes('best')" class="bg-gold text-white text-xs px-2 py-1 rounded-full font-medium">
+                  Best Seller
+                </span>
+              </div>
+
+              <!-- Stock indicator -->
+              <div v-if="product.Stock <= 5 && product.Stock > 0" class="absolute bottom-2 right-2 bg-warning text-white text-xs px-2 py-1 rounded-full">
+                Tinggal {{ product.Stock }}
+              </div>
+              <div v-if="product.Stock === 0" class="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <span class="bg-charcoal text-white text-xs px-3 py-1 rounded-full">Stok Habis</span>
+              </div>
+            </div>
+
+            <!-- Product Info -->
+            <div class="p-3">
+              <h3 class="font-semibold text-sm mb-1 line-clamp-1">{{ product.Name }}</h3>
+              <p class="text-xs text-gray-500 line-clamp-2 mb-2">{{ product.Description }}</p>
+              <div class="flex items-center justify-between">
+                <span class="text-terracotta font-bold">
+                  Rp {{ Number(product.Price).toLocaleString('id-ID') }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else class="text-center py-12">
+          <div class="w-24 h-24 bg-sand rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-rose" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="font-display text-lg font-semibold text-charcoal mb-2">Oops!</h3>
+          <p class="text-gray-500">Produk yang kamu cari tidak ditemukan</p>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-sand safe-bottom z-50">
+      <div class="max-w-lg mx-auto flex items-center justify-around px-2 py-2">
+        <button
+          @click="currentTab = 'home'"
+          class="flex flex-col items-center p-3 rounded-xl transition-colors"
+          :class="currentTab === 'home' ? 'text-terracotta' : 'text-gray-400'"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          <span class="text-xs mt-1 font-medium">Beranda</span>
+        </button>
+
+        <button
+          @click="currentTab = 'cart'"
+          class="relative flex flex-col items-center p-3 rounded-xl transition-colors"
+          :class="currentTab === 'cart' ? 'text-terracotta' : 'text-gray-400'"
+        >
+          <div class="relative">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span
+              v-if="cart.length > 0"
+              class="absolute -top-1 -right-1 bg-terracotta text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold"
+            >
+              {{ cart.length }}
+            </span>
+          </div>
+          <span class="text-xs mt-1 font-medium">Keranjang</span>
+        </button>
+
+        <button
+          @click="currentTab = 'orders'"
+          class="flex flex-col items-center p-3 rounded-xl transition-colors"
+          :class="currentTab === 'orders' ? 'text-terracotta' : 'text-gray-400'"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+          </svg>
+          <span class="text-xs mt-1 font-medium">Pesanan</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Product Modal -->
+    <div
+      v-if="selectedProduct"
+      class="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center"
+      @click.self="closeProductModal"
+    >
+      <div class="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide-up">
+        <!-- Close button -->
+        <button @click="closeProductModal" class="absolute top-4 right-4 z-10 bg-white/80 rounded-full p-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <!-- Product Image -->
+        <div class="relative aspect-square bg-sand">
+          <img
+            v-if="selectedProduct.ImageURL"
+            :src="selectedProduct.ImageURL"
+            :alt="selectedProduct.Name"
+            class="w-full h-full object-cover"
+            @error="handleImageError($event)"
+          >
+          <div v-else class="w-full h-full flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-rose/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Product Details -->
+        <div class="p-6">
+          <div class="flex items-start justify-between mb-2">
+            <h2 class="font-display text-2xl font-bold text-charcoal">{{ selectedProduct.Name }}</h2>
+            <span v-if="selectedProduct.LeadTimeDays > 0" class="bg-rose text-white text-sm px-3 py-1 rounded-full font-medium">
+              H+{{ selectedProduct.LeadTimeDays }}
+            </span>
+          </div>
+
+          <p class="text-gray-600 mb-4">{{ selectedProduct.Description }}</p>
+
+          <div class="flex items-center gap-2 mb-4">
+            <span class="bg-sand text-terracotta px-3 py-1 rounded-full text-sm font-medium">
+              {{ selectedProduct.Category }}
+            </span>
+            <span v-if="selectedProduct.Stock > 0 && selectedProduct.Stock <= 5" class="bg-warning/10 text-warning text-sm px-3 py-1 rounded-full font-medium">
+              Tinggal {{ selectedProduct.Stock }}
+            </span>
+            <span v-if="selectedProduct.Tags && selectedProduct.Tags.includes('best')" class="bg-gold/10 text-gold text-sm px-3 py-1 rounded-full font-medium">
+              Best Seller
+            </span>
+          </div>
+
+          <div class="text-3xl font-bold text-terracotta mb-6">
+            Rp {{ Number(selectedProduct.Price).toLocaleString('id-ID') }}
+          </div>
+
+          <!-- Quantity Selector -->
+          <div class="flex items-center justify-between bg-sand rounded-xl p-2 mb-6">
+            <button
+              @click="decreaseQuantity"
+              class="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-terracotta font-bold text-xl hover:bg-terracotta hover:text-white transition-colors btn-press"
+              :disabled="quantity <= 1"
+            >
+              -
+            </button>
+            <span class="text-xl font-bold">{{ quantity }}</span>
+            <button
+              @click="increaseQuantity"
+              class="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-terracotta font-bold text-xl hover:bg-terracotta hover:text-white transition-colors btn-press"
+              :disabled="quantity >= selectedProduct.Stock"
+            >
+              +
+            </button>
+          </div>
+
+          <!-- Add to Cart Button -->
+          <button
+            @click="addToCart"
+            :disabled="selectedProduct.Stock === 0"
+            class="w-full bg-gradient-to-r from-terracotta to-rose text-white font-semibold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all btn-press disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span v-if="selectedProduct.Stock === 0">Stok Habis</span>
+            <span v-else>Tambah ke Keranjang</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cart Tab -->
+    <div v-if="currentTab === 'cart'" class="fixed inset-0 bg-cream z-40 pt-16 pb-20 overflow-y-auto">
+      <div class="max-w-lg mx-auto px-4 py-4">
+        <h2 class="font-display text-2xl font-bold text-charcoal mb-6">Keranjang</h2>
+
+        <div v-if="cart.length === 0" class="text-center py-12">
+          <div class="w-24 h-24 bg-sand rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-rose" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <h3 class="font-display text-lg font-semibold text-charcoal mb-2">Keranjang Kosong</h3>
+          <p class="text-gray-500 mb-4">Yuk, tambah makanan favoritmu!</p>
+          <button @click="currentTab = 'home'" class="bg-terracotta text-white px-6 py-3 rounded-xl font-medium">
+            Browse Menu
+          </button>
+        </div>
+
+        <div v-else class="space-y-4">
+          <!-- Cart Items -->
+          <div v-for="(item, index) in cart" :key="index" class="bg-white rounded-2xl p-4 shadow-sm">
+            <div class="flex gap-4">
+              <div class="w-20 h-20 bg-sand rounded-xl overflow-hidden flex-shrink-0">
+                <img v-if="item.ImageURL" :src="item.ImageURL" :alt="item.name" class="w-full h-full object-cover">
+                <div v-else class="w-full h-full flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-rose/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              </div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-charcoal">{{ item.name }}</h4>
+                <p class="text-terracotta font-bold">Rp {{ Number(item.price).toLocaleString('id-ID') }}</p>
+                <div class="flex items-center justify-between mt-2">
+                  <div class="flex items-center bg-sand rounded-lg">
+                    <button @click="updateCartQuantity(index, item.quantity - 1)" class="px-3 py-1 text-terracotta font-bold">-</button>
+                    <span class="px-3 py-1 font-medium">{{ item.quantity }}</span>
+                    <button @click="updateCartQuantity(index, item.quantity + 1)" class="px-3 py-1 text-terracotta font-bold">+</button>
+                  </div>
+                  <button @click="removeFromCart(index)" class="text-red-500 p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order Summary -->
+          <div class="bg-white rounded-2xl p-6 shadow-sm">
+            <h3 class="font-display text-lg font-semibold mb-4">Ringkasan Pesanan</h3>
+            <div class="space-y-2 mb-4">
+              <div class="flex justify-between text-gray-600">
+                <span>Subtotal</span>
+                <span>Rp {{ cartSubtotal.toLocaleString('id-ID') }}</span>
+              </div>
+              <div class="flex justify-between text-gray-600">
+                <span>Biaya Admin</span>
+                <span>Rp {{ deliveryFee.toLocaleString('id-ID') }}</span>
+              </div>
+              <div class="flex justify-between text-xl font-bold text-charcoal pt-2 border-t">
+                <span>Total</span>
+                <span class="text-terracotta">Rp {{ cartTotal.toLocaleString('id-ID') }}</span>
+              </div>
+            </div>
+
+            <!-- Customer Info Form -->
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                <input v-model="customerName" type="text" placeholder="Contoh: Siti Aminah" class="w-full px-4 py-3 bg-sand rounded-xl border-0 focus:ring-2 focus:ring-terracotta focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nomor WhatsApp</label>
+                <input v-model="customerPhone" type="tel" placeholder="Contoh: 081234567890" class="w-full px-4 py-3 bg-sand rounded-xl border-0 focus:ring-2 focus:ring-terracotta focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Alamat Lengkap</label>
+                <textarea v-model="customerAddress" placeholder="Nama jalan, nomor rumah, RT/RW, kelurah" rows="3" class="w-full px-4 py-3 bg-sand rounded-xl border-0 focus:ring-2 focus:ring-terracotta focus:outline-none"></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Pengiriman</label>
+                <input v-model="deliveryDate" type="date" :min="minDeliveryDate" class="w-full px-4 py-3 bg-sand rounded-xl border-0 focus:ring-2 focus:ring-terracotta focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Metode Pembayaran</label>
+                <div class="grid grid-cols-2 gap-3">
+                  <label
+                    v-for="method in paymentMethods"
+                    :key="method"
+                    class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer transition-colors"
+                    :class="paymentMethod === method ? 'border-terracotta bg-terracotta/5' : 'border-sand'"
+                  >
+                    <input v-model="paymentMethod" type="radio" :value="method" class="hidden">
+                    <span class="text-sm font-medium">{{ method }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button
+              @click="submitOrder"
+              :disabled="!isCartValid || submitting"
+              class="w-full mt-6 bg-gradient-to-r from-terracotta to-rose text-white font-semibold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all btn-press disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="submitting">Memproses...</span>
+              <span v-else>Pesan Sekarang</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders Tab -->
+    <div v-if="currentTab === 'orders'" class="fixed inset-0 bg-cream z-40 pt-16 pb-20 overflow-y-auto">
+      <div class="max-w-lg mx-auto px-4 py-4">
+        <h2 class="font-display text-2xl font-bold text-charcoal mb-6">Pesanan Saya</h2>
+
+        <div v-if="myOrders.length === 0" class="text-center py-12">
+          <div class="w-24 h-24 bg-sand rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-rose" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+          <h3 class="font-display text-lg font-semibold text-charcoal mb-2">Belum Ada Pesanan</h3>
+          <p class="text-gray-500 mb-4">Yuk, pesan makanan favoritmu!</p>
+          <button @click="currentTab = 'home'" class="bg-terracotta text-white px-6 py-3 rounded-xl font-medium">
+            Browse Menu
+          </button>
+        </div>
+
+        <div v-else class="space-y-4">
+          <div v-for="order in myOrders" :key="order.OrderID" class="bg-white rounded-2xl p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <span class="font-mono text-sm text-gray-500">{{ order.OrderID }}</span>
+              <span
+                class="px-3 py-1 rounded-full text-xs font-medium"
+                :class="{
+                  'bg-blue-100 text-blue-700': order.Status === 'Baru',
+                  'bg-yellow-100 text-yellow-700': order.Status === 'Dikonfirmasi',
+                  'bg-purple-100 text-purple-700': order.Status === 'Diproses',
+                  'bg-orange-100 text-orange-700': order.Status === 'Siap',
+                  'bg-green-100 text-green-700': order.Status === 'Selesai',
+                  'bg-red-100 text-red-700': order.Status === 'Batal'
+                }"
+              >
+                {{ order.Status }}
+              </span>
+            </div>
+            <div class="text-sm text-gray-600 mb-2">
+              {{ formatDate(order.Timestamp) }}
+            </div>
+            <div class="font-bold text-terracotta">
+              Rp {{ Number(order.TotalAmount).toLocaleString('id-ID') }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div
+      v-if="toast.show"
+      class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 toast-enter"
+    >
+      <div
+        class="px-6 py-3 rounded-full shadow-lg flex items-center gap-2"
+        :class="{
+          'bg-success text-white': toast.type === 'success',
+          'bg-error text-white': toast.type === 'error',
+          'bg-warning text-white': toast.type === 'warning'
+        }"
+      >
+        <svg v-if="toast.type === 'success'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <svg v-if="toast.type === 'error'" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        <span class="font-medium">{{ toast.message }}</span>
+      </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div v-if="showSuccessModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center">
+        <div class="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 class="font-display text-2xl font-bold text-charcoal mb-2">Pesanan Diterima!</h3>
+        <p class="text-gray-600 mb-4">Terima kasih sudah memesan, {{ customerName }}! 💛</p>
+        <div class="bg-sand rounded-xl p-4 mb-6">
+          <p class="text-sm text-gray-600">ID Pesanan</p>
+          <p class="font-mono font-bold text-terracotta">{{ lastOrderId }}</p>
+        </div>
+        <p class="text-sm text-gray-500 mb-6">Kami akan menghubungi kamu melalui WhatsApp untuk konfirmasi pesanan.</p>
+
+        <!-- WhatsApp Link -->
+        <a
+          :href="whatsappLink"
+          target="_blank"
+          class="block w-full bg-green-500 text-white font-semibold py-3 rounded-xl shadow-lg hover:bg-green-600 transition-colors btn-press"
+        >
+          Hubungi via WhatsApp
+        </a>
+
+        <button
+          @click="closeSuccessModal"
+          class="w-full mt-3 text-gray-500 font-medium py-2"
+        >
+          Tutup
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Vue App -->
+  <script>
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    createApp({
+      setup() {
+        // State
+        const loading = ref(true);
+        const products = ref([]);
+        const cart = ref([]);
+        const currentTab = ref('home');
+        const selectedCategory = ref('all');
+        const selectedProduct = ref(null);
+        const quantity = ref(1);
+        const showSearch = ref(false);
+        const searchQuery = ref('');
+        const categories = ref(['Makanan', 'Minuman', 'Snack', 'Dessert']);
+
+        // Customer data
+        const customerName = ref('');
+        const customerPhone = ref('');
+        const customerAddress = ref('');
+        const deliveryDate = ref('');
+        const paymentMethod = ref('Transfer Bank');
+
+        // Order state
+        const myOrders = ref([]);
+        const submitting = ref(false);
+        const deliveryFee = ref(0);
+        const paymentMethods = ref(['Transfer Bank', 'COD', 'E-Wallet']);
+
+        // UI state
+        const toast = ref({ show: false, message: '', type: 'success' });
+        const showSuccessModal = ref(false);
+        const lastOrderId = ref('');
+
+        // Computed
+        const filteredProducts = computed(() => {
+          let result = products.value;
+
+          // Filter by category
+          if (selectedCategory.value !== 'all') {
+            result = result.filter(p => p.Category === selectedCategory.value);
+          }
+
+          // Filter by search
+          if (searchQuery.value) {
+            const query = searchQuery.value.toLowerCase();
+            result = result.filter(p =>
+              p.Name.toLowerCase().includes(query) ||
+              p.Description.toLowerCase().includes(query)
+            );
+          }
+
+          return result;
+        });
+
+        const cartSubtotal = computed(() => {
+          return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        });
+
+        const cartTotal = computed(() => {
+          return cartSubtotal.value + deliveryFee.value;
+        });
+
+        const minDeliveryDate = computed(() => {
+          const today = new Date();
+          today.setDate(today.getDate() + 1);
+          return today.toISOString().split('T')[0];
+        });
+
+        const isCartValid = computed(() => {
+          return cart.value.length > 0 &&
+                 customerName.value.trim() &&
+                 customerPhone.value.trim() &&
+                 customerAddress.value.trim() &&
+                 deliveryDate.value &&
+                 paymentMethod.value;
+        });
+
+        const whatsappLink = computed(() => {
+          const message = `Halo RekaOrder, saya ${customerName.value} ingin konfirmasi pesanan saya dengan ID: ${lastOrderId.value}`;
+          return `https://wa.me/?text=${encodeURIComponent(message)}`;
+        });
+
+        // Methods
+        const loadProducts = async () => {
+          loading.value = true;
+          try {
+            const response = await google.script.run.withSuccessHandler(r => {
+              if (r.success) {
+                products.value = r.products;
+              }
+              loading.value = false;
+            }).getProducts({});
+          } catch (error) {
+            console.error('Error loading products:', error);
+            loading.value = false;
+            showToast('Gagal memuat produk', 'error');
+          }
+        };
+
+        const loadSettings = async () => {
+          try {
+            await google.script.run.withSuccessHandler(r => {
+              deliveryFee.value = Number(r.DELIVERY_FEE) || 0;
+            }).getSettings();
+          } catch (error) {
+            console.error('Error loading settings:', error);
+          }
+        };
+
+        const loadCart = () => {
+          const saved = localStorage.getItem('rekaorder_cart');
+          if (saved) {
+            cart.value = JSON.parse(saved);
+          }
+        };
+
+        const saveCart = () => {
+          localStorage.setItem('rekaorder_cart', JSON.stringify(cart.value));
+        };
+
+        const openProductModal = (product) => {
+          selectedProduct.value = product;
+          quantity.value = 1;
+        };
+
+        const closeProductModal = () => {
+          selectedProduct.value = null;
+        };
+
+        const increaseQuantity = () => {
+          if (quantity.value < selectedProduct.value.Stock) {
+            quantity.value++;
+          }
+        };
+
+        const decreaseQuantity = () => {
+          if (quantity.value > 1) {
+            quantity.value--;
+          }
+        };
+
+        const addToCart = () => {
+          const item = {
+            productId: selectedProduct.value.ProductID,
+            name: selectedProduct.value.Name,
+            price: selectedProduct.value.Price,
+            quantity: quantity.value,
+            ImageURL: selectedProduct.value.ImageURL,
+            LeadTimeDays: selectedProduct.value.LeadTimeDays
+          };
+
+          // Check if already in cart
+          const existing = cart.value.find(c => c.productId === item.productId);
+          if (existing) {
+            existing.quantity += quantity.value;
+          } else {
+            cart.value.push(item);
+          }
+
+          saveCart();
+          closeProductModal();
+          showToast('Ditambahkan ke keranjang!', 'success');
+          currentTab.value = 'cart';
+        };
+
+        const updateCartQuantity = (index, newQty) => {
+          if (newQty <= 0) {
+            cart.value.splice(index, 1);
+          } else {
+            cart.value[index].quantity = newQty;
+          }
+          saveCart();
+        };
+
+        const removeFromCart = (index) => {
+          cart.value.splice(index, 1);
+          saveCart();
+        };
+
+        const submitOrder = async () => {
+          if (!isCartValid.value) {
+            showToast('Mohon lengkapi semua data', 'error');
+            return;
+          }
+
+          submitting.value = true;
+
+          try {
+            const result = await new Promise((resolve, reject) => {
+              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).submitOrder({
+                customerName: customerName.value,
+                customerPhone: customerPhone.value,
+                customerAddress: customerAddress.value,
+                deliveryDate: deliveryDate.value,
+                paymentMethod: paymentMethod.value,
+                cart: cart.value
+              });
+            });
+
+            if (result.success) {
+              lastOrderId.value = result.orderId;
+              cart.value = [];
+              saveCart();
+              showSuccessModal.value = true;
+              myOrders.value.unshift({
+                OrderID: result.orderId,
+                Timestamp: new Date().toISOString(),
+                TotalAmount: result.totalAmount,
+                Status: 'Baru'
+              });
+            } else {
+              showToast(result.error || 'Gagal submit pesanan', 'error');
+            }
+          } catch (error) {
+            console.error('Error submitting order:', error);
+            showToast('Terjadi kesalahan', 'error');
+          } finally {
+            submitting.value = false;
+          }
+        };
+
+        const closeSuccessModal = () => {
+          showSuccessModal.value = false;
+          currentTab.value = 'orders';
+          // Reset form
+          customerName.value = '';
+          customerPhone.value = '';
+          customerAddress.value = '';
+          deliveryDate.value = '';
+        };
+
+        const showToast = (message, type = 'success') => {
+          toast.value = { show: true, message, type };
+          setTimeout(() => {
+            toast.value.show = false;
+          }, 3000);
+        };
+
+        const toggleSearch = () => {
+          showSearch.value = !showSearch.value;
+          if (!showSearch.value) {
+            searchQuery.value = '';
+          }
+        };
+
+        const performSearch = () => {
+          // Search is handled by computed
+        };
+
+        const clearSearch = () => {
+          searchQuery.value = '';
+        };
+
+        const formatDate = (dateStr) => {
+          const date = new Date(dateStr);
+          return date.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        };
+
+        const handleImageError = (event) => {
+          event.target.style.display = 'none';
+        };
+
+        // Watch for cart changes
+        watch(cart, saveCart, { deep: true });
+
+        // Lifecycle
+        onMounted(() => {
+          loadProducts();
+          loadSettings();
+          loadCart();
+
+          // Set default delivery date to tomorrow
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          deliveryDate.value = tomorrow.toISOString().split('T')[0];
+        });
+
+        return {
+          // State
+          loading,
+          products,
+          cart,
+          currentTab,
+          selectedCategory,
+          selectedProduct,
+          quantity,
+          showSearch,
+          searchQuery,
+          categories,
+          customerName,
+          customerPhone,
+          customerAddress,
+          deliveryDate,
+          paymentMethod,
+          paymentMethods,
+          myOrders,
+          submitting,
+          deliveryFee,
+          toast,
+          showSuccessModal,
+          lastOrderId,
+
+          // Computed
+          filteredProducts,
+          cartSubtotal,
+          cartTotal,
+          minDeliveryDate,
+          isCartValid,
+          whatsappLink,
+
+          // Methods
+          openProductModal,
+          closeProductModal,
+          increaseQuantity,
+          decreaseQuantity,
+          addToCart,
+          updateCartQuantity,
+          removeFromCart,
+          submitOrder,
+          closeSuccessModal,
+          showToast,
+          toggleSearch,
+          performSearch,
+          clearSearch,
+          formatDate,
+          handleImageError
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
