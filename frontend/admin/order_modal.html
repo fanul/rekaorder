@@ -1,0 +1,41 @@
+<!-- Order Detail Modal -->
+<div v-if="selectedOrder" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-lg">
+    <div class="p-6 border-b border-sand flex justify-between items-center">
+      <h3 class="font-display text-xl font-semibold">Detail Pesanan</h3>
+      <button @click="selectedOrder = null" class="text-gray-500 hover:text-gray-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="p-6 space-y-4">
+      <div>
+        <p class="text-sm text-gray-500">ID Pesanan</p>
+        <p class="font-mono font-medium">{{ selectedOrder.OrderID }}</p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Customer</p>
+        <p class="font-medium">{{ selectedOrder.CustomerName }}</p>
+        <p class="text-sm">{{ selectedOrder.CustomerPhone }}</p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Alamat</p>
+        <p>{{ selectedOrder.CustomerAddress }}</p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Item Pesanan</p>
+        <div class="bg-sand rounded-lg p-3 mt-1">
+          <div v-for="(item, idx) in parseCart(selectedOrder.CartJSON)" :key="idx" class="flex justify-between py-1">
+            <span>{{ item.name }} x{{ item.quantity }}</span>
+            <span class="font-medium">Rp {{ item.subtotal.toLocaleString('id-ID') }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-between pt-2 border-t">
+        <span class="font-semibold">Total</span>
+        <span class="font-bold text-terracotta text-lg">Rp {{ Number(selectedOrder.TotalAmount).toLocaleString('id-ID') }}</span>
+      </div>
+    </div>
+  </div>
+</div>

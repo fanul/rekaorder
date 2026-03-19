@@ -1,0 +1,103 @@
+<!-- Add/Edit Product Modal -->
+<div v-if="showAddProduct" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="p-6 border-b border-sand">
+      <h3 class="font-display text-xl font-semibold">{{ editingProduct ? 'Edit Produk' : 'Tambah Produk' }}</h3>
+    </div>
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
+        <input v-model="productForm.Name" type="text" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+        <textarea v-model="productForm.Description" rows="2" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+          <select v-model="productForm.Category" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+            <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Harga (Rp)</label>
+          <input v-model="productForm.Price" type="number" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Produk</label>
+          <select v-model="productForm.ProductType" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+            <option value="Regular">Regular</option>
+            <option value="Preorder">Preorder</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Lead Time (Hari)</label>
+          <input v-model="productForm.LeadTimeDays" type="number" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Stok (untuk Regular)</label>
+          <input v-model="productForm.Stock" type="number" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Kapasitas per Hari (untuk Preorder)</label>
+          <input v-model="productForm.DailyCapacity" type="number" placeholder="0 = unlimited" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Gambar Produk (bisa upload banyak)</label>
+
+        <!-- Image Slider -->
+        <div v-if="productImages.length > 0" class="relative mb-3">
+          <div class="aspect-video bg-sand rounded-lg overflow-hidden relative">
+            <img :src="productImages[currentImageIndex].url" class="w-full h-full object-cover">
+            <!-- Navigation arrows -->
+            <button v-if="productImages.length > 1" @click="prevImage" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <button v-if="productImages.length > 1" @click="nextImage" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </button>
+            <!-- Dots -->
+            <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+              <button v-for="(img, i) in productImages" :key="i" @click="currentImageIndex = i" class="w-2 h-2 rounded-full transition-colors" :class="i === currentImageIndex ? 'bg-terracotta' : 'bg-white/60'"></button>
+            </div>
+          </div>
+          <!-- Thumbnail strip -->
+          <div class="flex gap-2 mt-2 overflow-x-auto py-1">
+            <div v-for="(img, i) in productImages" :key="i" class="relative flex-shrink-0">
+              <img :src="img.url" class="w-16 h-16 object-cover rounded-lg cursor-pointer border-2" :class="i === currentImageIndex ? 'border-terracotta' : 'border-transparent'" @click="currentImageIndex = i">
+              <button @click="removeImage(i)" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">&times;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Button -->
+        <div class="flex items-center gap-3">
+          <label class="cursor-pointer px-4 py-2 bg-terracotta text-white rounded-lg hover:bg-terracotta-dark transition-colors flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>{{ uploadingImage ? 'Mengupload...' : 'Tambah Gambar' }}</span>
+            <input type="file" accept="image/*" @change="handleImageUpload" class="hidden" :disabled="uploadingImage">
+          </label>
+          <span v-if="uploadError" class="text-red-500 text-sm">{{ uploadError }}</span>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Tags (pisahkan dengan koma)</label>
+        <input v-model="productForm.Tags" type="text" placeholder="best, new, popular" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+      </div>
+    </div>
+    <div class="p-6 border-t border-sand flex justify-end gap-3">
+      <button @click="closeProductModal" class="px-4 py-2 text-gray-600 hover:bg-sand rounded-lg transition-colors">Batal</button>
+      <button @click="saveProduct" class="px-4 py-2 bg-terracotta text-white rounded-lg font-medium hover:bg-terracotta-dark transition-colors">
+        {{ editingProduct ? 'Update' : 'Simpan' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -4,7 +4,7 @@
  */
 
 const IMAGE_CONFIG = {
-  FOLDER_ID: '1KUThCih1a5qwnkYwC2WboeaZSgYHYDJy',
+  FOLDER_ID: '1W1hlwriONNgwOU2QSSZbwIT8rXpXhumM',
   MAX_SIZE_MB: 5,
   ALLOWED_EXTENSIONS: ['jpg', 'jpeg', 'png', 'gif', 'webp']
 };
@@ -58,7 +58,7 @@ function uploadImageBase64(data) {
       success: true,
       fileId: file.getId(),
       fileName: uniqueFileName,
-      directLink: `https://drive.google.com/uc?export=download&id=${file.getId()}`
+      directLink: `https://lh3.googleusercontent.com/d/${file.getId()}`
     };
 
   } catch (error) {

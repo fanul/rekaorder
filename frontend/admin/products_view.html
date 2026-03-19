@@ -1,0 +1,59 @@
+<!-- Products View -->
+<div v-if="currentView === 'products'" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+  <div class="p-4 border-b border-sand flex items-center justify-between">
+    <h3 class="font-semibold">Daftar Produk</h3>
+    <button @click="showAddProduct = true" class="px-4 py-2 bg-terracotta text-white rounded-lg font-medium hover:bg-terracotta-dark transition-colors">
+      + Tambah Produk
+    </button>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-sand">
+        <tr>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Produk</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Kategori</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Harga</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Stok</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Status</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-sand">
+        <tr v-for="product in products" :key="product.ProductID" class="hover:bg-cream/50">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-sand rounded-lg overflow-hidden">
+                <img v-if="product.ImageURL" :src="product.ImageURL" class="w-full h-full object-cover">
+              </div>
+              <div>
+                <p class="font-medium">{{ product.Name }}</p>
+                <p class="text-xs text-gray-500">{{ product.Description }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-sm">{{ product.Category }}</td>
+          <td class="px-4 py-3 font-semibold text-terracotta">
+            Rp {{ Number(product.Price).toLocaleString('id-ID') }}
+          </td>
+          <td class="px-4 py-3">{{ product.Stock }}</td>
+          <td class="px-4 py-3">
+            <button
+              @click="toggleAvailability(product.ProductID)"
+              class="px-3 py-1 rounded-full text-xs font-medium"
+              :class="product.IsAvailable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+            >
+              {{ product.IsAvailable ? 'Aktif' : 'Nonaktif' }}
+            </button>
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex gap-2">
+              <button @click="editProduct(product)" class="text-blue-600 hover:underline text-sm">Edit</button>
+              <button @click="deleteProduct(product.ProductID)" class="text-red-600 hover:underline text-sm">Hapus</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

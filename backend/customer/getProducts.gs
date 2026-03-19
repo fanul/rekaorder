@@ -32,6 +32,7 @@ function getProductsFromSheet() {
     product.Price = parseNumber(product.Price);
     product.LeadTimeDays = parseNumber(product.LeadTimeDays);
     product.Stock = parseNumber(product.Stock);
+    product.DailyCapacity = parseNumber(product.DailyCapacity);
 
     // Process images
     const processedImages = processProductImages(product.Images);

@@ -14,7 +14,7 @@ function getProductsAdmin(data) {
 
 function addProduct(data) {
   try {
-    const { Name, Price, Description, Category, LeadTimeDays, Stock, Images, Tags } = data;
+    const { Name, Price, Description, Category, ProductType, LeadTimeDays, Stock, DailyCapacity, Images, Tags } = data;
 
     if (!Name || Price === undefined) {
       return { success: false, error: 'Name and Price are required' };
@@ -28,8 +28,10 @@ function addProduct(data) {
       Description || '',
       Category || 'Makanan',
       parseNumber(Price),
+      ProductType || 'Regular',
       parseNumber(LeadTimeDays) || 0,
       parseNumber(Stock) || 0,
+      parseNumber(DailyCapacity) || 0,
       Images || '',
       true,
       Tags || ''
@@ -50,7 +52,7 @@ function addProduct(data) {
 
 function updateProduct(data) {
   try {
-    const { ProductID, Name, Description, Category, Price, LeadTimeDays, Stock, Images, Tags } = data;
+    const { ProductID, Name, Description, Category, Price, ProductType, LeadTimeDays, Stock, DailyCapacity, Images, Tags } = data;
 
     if (!ProductID) {
       return { success: false, error: 'ProductID is required' };
@@ -62,13 +64,13 @@ function updateProduct(data) {
     }
 
     const headers = getSheetData(CONFIG.SHEETS.PRODUCTS)[0];
-    const fields = { Name, Description, Category, Price, LeadTimeDays, Stock, Images, Tags };
+    const fields = { Name, Description, Category, Price, ProductType, LeadTimeDays, Stock, DailyCapacity, Images, Tags };
 
     for (const [field, value] of Object.entries(fields)) {
       if (value !== undefined) {
         const colIndex = headers.indexOf(field);
         if (colIndex !== -1) {
-          const finalValue = ['Price', 'LeadTimeDays', 'Stock'].includes(field)
+          const finalValue = ['Price', 'LeadTimeDays', 'Stock', 'DailyCapacity'].includes(field)
             ? parseNumber(value)
             : value;
           updateCell(CONFIG.SHEETS.PRODUCTS, rowIndex, colIndex + 1, finalValue);

@@ -54,6 +54,11 @@
 
   <!-- Custom Styles -->
   <?!= include('frontend/customer/styles'); ?>
+
+  <!-- Get script URL from backend -->
+  <script>
+    var scriptUrl = '<?!= getScriptUrl(); ?>';
+  </script>
 </head>
 <body class="bg-cream font-body text-charcoal antialiased">
   <div id="app" class="min-h-screen flex flex-col">

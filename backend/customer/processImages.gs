@@ -28,5 +28,5 @@ function processProductImages(imagesField) {
 function getImageUrl(fileIdOrUrl) {
   if (!fileIdOrUrl) return '';
   if (fileIdOrUrl.startsWith('http')) return fileIdOrUrl;
-  return `https://docs.google.com/uc?export=download&id=${fileIdOrUrl}`;
+  return `https://lh3.googleusercontent.com/d/${fileIdOrUrl}`;
 }

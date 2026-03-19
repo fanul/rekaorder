@@ -1,0 +1,76 @@
+<!-- Orders View -->
+<div v-if="currentView === 'orders'" class="bg-white rounded-2xl shadow-sm overflow-hidden">
+  <div class="p-4 border-b border-sand flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <select v-model="statusFilter" class="px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+        <option value="">Semua Status</option>
+        <option value="Baru">Baru</option>
+        <option value="Dikonfirmasi">Dikonfirmasi</option>
+        <option value="Diproses">Diproses</option>
+        <option value="Siap">Siap</option>
+        <option value="Selesai">Selesai</option>
+        <option value="Batal">Batal</option>
+      </select>
+    </div>
+    <button @click="exportOrders" class="px-4 py-2 bg-terracotta text-white rounded-lg font-medium hover:bg-terracotta-dark transition-colors">
+      Export CSV
+    </button>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-sand">
+        <tr>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">ID Pesanan</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Customer</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Total</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Status</th>
+          <th class="px-4 py-3 text-left text-sm font-semibold text-charcoal">Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-sand">
+        <tr v-for="order in filteredOrders" :key="order.OrderID" class="hover:bg-cream/50">
+          <td class="px-4 py-3">
+            <span class="font-mono text-sm">{{ order.OrderID }}</span>
+          </td>
+          <td class="px-4 py-3">
+            <div>
+              <p class="font-medium">{{ order.CustomerName }}</p>
+              <p class="text-sm text-gray-500">{{ order.CustomerPhone }}</p>
+            </div>
+          </td>
+          <td class="px-4 py-3 font-semibold text-terracotta">
+            Rp {{ Number(order.TotalAmount).toLocaleString('id-ID') }}
+          </td>
+          <td class="px-4 py-3">
+            <select
+              :value="order.Status"
+              @change="updateStatus(order.OrderID, $event.target.value)"
+              class="px-3 py-1 rounded-full text-sm font-medium border-0 cursor-pointer"
+              :class="{
+                'bg-blue-100 text-blue-700': order.Status === 'Baru',
+                'bg-yellow-100 text-yellow-700': order.Status === 'Dikonfirmasi',
+                'bg-purple-100 text-purple-700': order.Status === 'Diproses',
+                'bg-orange-100 text-orange-700': order.Status === 'Siap',
+                'bg-green-100 text-green-700': order.Status === 'Selesai',
+                'bg-red-100 text-red-700': order.Status === 'Batal'
+              }"
+            >
+              <option value="Baru">Baru</option>
+              <option value="Dikonfirmasi">Dikonfirmasi</option>
+              <option value="Diproses">Diproses</option>
+              <option value="Siap">Siap</option>
+              <option value="Selesai">Selesai</option>
+              <option value="Batal">Batal</option>
+            </select>
+          </td>
+          <td class="px-4 py-3">
+            <button @click="viewOrderDetail(order)" class="text-terracotta hover:underline text-sm font-medium">
+              Detail
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,17 @@
+<!-- Header -->
+<header class="bg-white shadow-sm border-b border-sand px-6 py-4">
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="font-display text-xl font-semibold">
+        {{ currentView === 'orders' ? 'Kelola Pesanan' : currentView === 'products' ? 'Kelola Produk' : 'Pengaturan' }}
+      </h2>
+      <p class="text-sm text-gray-500">{{ formatDate(new Date()) }}</p>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="bg-sand px-4 py-2 rounded-xl">
+        <span class="text-sm text-gray-600">Total Pendapatan:</span>
+        <span class="font-bold text-terracotta ml-2">Rp {{ stats.totalRevenue.toLocaleString('id-ID') }}</span>
+      </div>
+    </div>
+  </div>
+</header>

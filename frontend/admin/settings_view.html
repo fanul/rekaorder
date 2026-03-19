@@ -1,0 +1,65 @@
+<!-- Settings View -->
+<div v-if="currentView === 'settings'" class="bg-white rounded-2xl shadow-sm p-6">
+  <h3 class="font-semibold mb-6">Pengaturan Toko</h3>
+
+  <div class="space-y-4 max-w-xl">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Nama Toko</label>
+      <input v-model="settings.STORE_NAME" type="text" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Minimum Pesanan (Rp)</label>
+      <input v-model="settings.MIN_ORDER_AMOUNT" type="number" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Biaya Pengiriman (Rp)</label>
+      <input v-model="settings.DELIVERY_FEE" type="number" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+    </div>
+    <div class="pt-4 border-t">
+      <h4 class="font-medium mb-4">Kategori Produk</h4>
+      <div class="space-y-2">
+        <div class="flex gap-2">
+          <input v-model="newCategory" type="text" placeholder="Nama kategori baru" class="flex-1 px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+          <button @click="addCategory" class="px-4 py-2 bg-terracotta text-white rounded-lg hover:bg-terracotta-dark">Tambah</button>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <span v-for="(cat, index) in categories" :key="index" class="inline-flex items-center gap-1 px-3 py-1 bg-sand rounded-full text-sm">
+            {{ cat }}
+            <button @click="removeCategory(index)" class="text-red-500 hover:text-red-700">&times;</button>
+          </span>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Kategori akan tersedia saat menambah produk</p>
+      </div>
+    </div>
+    <div class="pt-4 border-t">
+      <h4 class="font-medium mb-4">Admin Access</h4>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email Admin (pisahkan dengan koma)</label>
+          <input v-model="settings.ADMIN_EMAILS" type="text" placeholder="admin@example.com, manager@example.com" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+          <p class="text-xs text-gray-500 mt-1">Hanya email yang terdaftar dapat mengakses halaman admin</p>
+        </div>
+      </div>
+    </div>
+    <div class="pt-4 border-t">
+      <h4 class="font-medium mb-4">Integrasi WhatsApp (WAHA)</h4>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">WAHA URL</label>
+          <input v-model="settings.WAHA_URL" type="text" placeholder="https://your-waha-instance.com" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">WAHA Session</label>
+          <input v-model="settings.WAHA_SESSION" type="text" placeholder="default" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nomor Admin (untuk notifikasi)</label>
+          <input v-model="settings.ADMIN_PHONE" type="text" placeholder="6281234567890" class="w-full px-4 py-2 bg-sand rounded-lg border-0 focus:ring-2 focus:ring-terracotta">
+        </div>
+      </div>
+    </div>
+    <button @click="saveSettings" class="px-6 py-2 bg-terracotta text-white rounded-lg font-medium hover:bg-terracotta-dark transition-colors">
+      Simpan Pengaturan
+    </button>
+  </div>
+</div>

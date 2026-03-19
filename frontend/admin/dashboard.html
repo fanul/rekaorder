@@ -417,14 +417,14 @@
                 </button>
                 <!-- Dots -->
                 <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                  <button v-for="(img, idx) in productImages" :key="idx" @click="currentImageIndex = idx" class="w-2 h-2 rounded-full transition-colors" :class="idx === currentImageIndex ? 'bg-terracotta' : 'bg-white/60'"></button>
+                  <button v-for="(img, i) in productImages" :key="i" @click="currentImageIndex = i" class="w-2 h-2 rounded-full transition-colors" :class="i === currentImageIndex ? 'bg-terracotta' : 'bg-white/60'"></button>
                 </div>
               </div>
               <!-- Thumbnail strip -->
               <div class="flex gap-2 mt-2 overflow-x-auto py-1">
-                <div v-for="(img, idx) in productImages" :key="idx" class="relative flex-shrink-0">
-                  <img :src="img.url" class="w-16 h-16 object-cover rounded-lg cursor-pointer border-2" :class="idx === currentImageIndex ? 'border-terracotta' : 'border-transparent'" @click="currentImageIndex = idx">
-                  <button @click="removeImage(idx)" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">&times;</button>
+                <div v-for="(img, i) in productImages" :key="i" class="relative flex-shrink-0">
+                  <img :src="img.url" class="w-16 h-16 object-cover rounded-lg cursor-pointer border-2" :class="i === currentImageIndex ? 'border-terracotta' : 'border-transparent'" @click="currentImageIndex = i">
+                  <button @click="removeImage(i)" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">&times;</button>
                 </div>
               </div>
             </div>
