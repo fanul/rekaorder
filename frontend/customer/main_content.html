@@ -62,7 +62,11 @@
 
           <!-- Badges -->
           <div class="absolute top-2 left-2 flex flex-col gap-1">
-            <span v-if="product.LeadTimeDays > 0" class="bg-rose text-white text-xs px-2 py-1 rounded-full font-medium badge-glow">
+            <!-- Preorder: show Preorder badge + LeadTime -->
+            <span v-if="product.ProductType === 'Preorder'" class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+              Preorder
+            </span>
+            <span v-if="product.ProductType === 'Preorder' && product.LeadTimeDays > 0" class="bg-rose text-white text-xs px-2 py-1 rounded-full font-medium">
               H+{{ product.LeadTimeDays }}
             </span>
             <span v-if="product.Tags && product.Tags.includes('best')" class="bg-gold text-white text-xs px-2 py-1 rounded-full font-medium">
@@ -70,13 +74,15 @@
             </span>
           </div>
 
-          <!-- Stock indicator -->
-          <div v-if="product.Stock <= 5 && product.Stock > 0" class="absolute bottom-2 right-2 bg-warning text-white text-xs px-2 py-1 rounded-full">
-            Tinggal {{ product.Stock }}
-          </div>
-          <div v-if="product.Stock === 0" class="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span class="bg-charcoal text-white text-xs px-3 py-1 rounded-full">Stok Habis</span>
-          </div>
+          <!-- Stock indicator (only for regular products) -->
+          <template v-if="product.ProductType !== 'Preorder'">
+            <div v-if="product.Stock <= 5 && product.Stock > 0" class="absolute bottom-2 right-2 bg-warning text-white text-xs px-2 py-1 rounded-full">
+              Tinggal {{ product.Stock }}
+            </div>
+            <div v-if="product.Stock === 0" class="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <span class="bg-charcoal text-white text-xs px-3 py-1 rounded-full">Stok Habis</span>
+            </div>
+          </template>
         </div>
 
         <!-- Product Info -->
