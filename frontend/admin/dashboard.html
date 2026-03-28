@@ -499,32 +499,27 @@
 
   </div>
 
+  <!-- Vue -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <!-- Modules -->
+  <script src="js/product_module.js"></script>
+  <script src="js/order_module.js"></script>
+  <script src="js/image_module.js"></script>
+  <script src="js/settings_module.js"></script>
+
   <script>
     const { createApp, ref, computed, onMounted } = Vue;
 
     createApp({
       setup() {
+        // State
         const currentView = ref('orders');
-        const orders = ref([]);
-        const products = ref([]);
         const statusFilter = ref('');
-        const stats = ref({ total: 0, baru: 0, diproses: 0, selesai: 0, totalRevenue: 0 });
         const showAddProduct = ref(false);
         const editingProduct = ref(null);
         const selectedOrder = ref(null);
-        const uploadingImage = ref(false);
         const uploadError = ref('');
-        const productImages = ref([]);  // Array of {id, url}
-        const currentImageIndex = ref(0);
-        const settings = ref({
-          STORE_NAME: '',
-          MIN_ORDER_AMOUNT: '0',
-          DELIVERY_FEE: '0',
-          WAHA_URL: '',
-          WAHA_SESSION: 'default',
-          ADMIN_PHONE: ''
-        });
 
         const productForm = ref({
           Name: '',
@@ -533,105 +528,28 @@
           Price: 0,
           LeadTimeDays: 0,
           Stock: 0,
-          ImageURL: '',
+          Images: '',
           Tags: ''
         });
 
+        // Initialize modules
+        const productModule = new ProductModule();
+        const orderModule = new OrderModule();
+        const imageModule = new ImageModule();
+        const settingsModule = new SettingsModule();
+
+        // Computed
         const filteredOrders = computed(() => {
-          if (!statusFilter.value) return orders.value;
-          return orders.value.filter(o => o.Status === statusFilter.value);
+          return orderModule.filterByStatus(orderModule.orders.value, statusFilter.value);
         });
 
-        const loadOrders = async () => {
-          try {
-            const result = await new Promise((resolve, reject) => {
-              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getAllOrders({});
-            });
-            if (result.success) {
-              orders.value = result.orders;
-              updateStats();
-            }
-          } catch (e) {
-            console.error('Error loading orders:', e);
-          }
-        };
+        const stats = computed(() => {
+          return orderModule.getStats();
+        });
 
+        // Methods - Products
         const loadProducts = async () => {
-          try {
-            const result = await new Promise((resolve, reject) => {
-              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getProductsAdmin({});
-            });
-            if (result.success) {
-              products.value = result.products;
-            }
-          } catch (e) {
-            console.error('Error loading products:', e);
-          }
-        };
-
-        const loadSettings = async () => {
-          try {
-            const result = await new Promise((resolve, reject) => {
-              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getSettings();
-            });
-            settings.value = { ...settings.value, ...result };
-          } catch (e) {
-            console.error('Error loading settings:', e);
-          }
-        };
-
-        const updateStats = () => {
-          stats.value = orders.value.reduce((acc, o) => {
-            acc.total++;
-            if (o.Status === 'Baru') acc.baru++;
-            if (['Dikonfirmasi', 'Diproses', 'Siap'].includes(o.Status)) acc.diproses++;
-            if (o.Status === 'Selesai') {
-              acc.selesai++;
-              acc.totalRevenue += Number(o.TotalAmount) || 0;
-            }
-            return acc;
-          }, { total: 0, baru: 0, diproses: 0, selesai: 0, totalRevenue: 0 });
-        };
-
-        const updateStatus = async (orderId, newStatus) => {
-          try {
-            await new Promise((resolve, reject) => {
-              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).updateOrderStatus({
-                orderId: orderId,
-                status: newStatus
-              });
-            });
-            const order = orders.value.find(o => o.OrderID === orderId);
-            if (order) order.Status = newStatus;
-            updateStats();
-          } catch (e) {
-            console.error('Error updating status:', e);
-          }
-        };
-
-        const exportOrders = async () => {
-          try {
-            const result = await new Promise((resolve, reject) => {
-              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).exportOrdersCSV({});
-            });
-            if (result.success && result.fileUrl) {
-              window.open(result.fileUrl, '_blank');
-            }
-          } catch (e) {
-            console.error('Error exporting:', e);
-          }
-        };
-
-        const viewOrderDetail = (order) => {
-          selectedOrder.value = order;
-        };
-
-        const parseCart = (cartJson) => {
-          try {
-            return JSON.parse(cartJson);
-          } catch {
-            return [];
-          }
+          await productModule.loadProducts();
         };
 
         const editProduct = (product) => {
@@ -646,33 +564,27 @@
             Images: product.Images ? product.Images.map(img => img.id).join(',') : '',
             Tags: product.Tags || ''
           };
-          // Load existing images
-          productImages.value = product.Images || [];
-          currentImageIndex.value = 0;
+          imageModule.loadImages(product);
           showAddProduct.value = true;
         };
 
         const closeProductModal = () => {
           showAddProduct.value = false;
           editingProduct.value = null;
-          productForm.value = { Name: '', Description: '', Category: 'Makanan', Price: 0, LeadTimeDays: 0, Stock: 0, Images: '', Tags: '' };
-          productImages.value = [];
-          currentImageIndex.value = 0;
+          productForm.value = productModule.getDefaultForm();
+          imageModule.reset();
         };
 
         const saveProduct = async () => {
           try {
+            productForm.value.Images = imageModule.getImageIds();
             if (editingProduct.value) {
-              await new Promise((resolve, reject) => {
-                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).updateProduct({
-                  ProductID: editingProduct.value.ProductID,
-                  ...productForm.value
-                });
+              await productModule.updateProduct({
+                ProductID: editingProduct.value.ProductID,
+                ...productForm.value
               });
             } else {
-              await new Promise((resolve, reject) => {
-                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).addProduct(productForm.value);
-              });
+              await productModule.addProduct(productForm.value);
             }
             closeProductModal();
             loadProducts();
@@ -683,133 +595,89 @@
 
         const deleteProduct = async (productId) => {
           if (!confirm('Yakin ingin menghapus produk ini?')) return;
-          try {
-            await new Promise((resolve, reject) => {
-              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).deleteProduct({ ProductID: productId });
-            });
-            loadProducts();
-          } catch (e) {
-            console.error('Error deleting product:', e);
-          }
+          await productModule.deleteProduct(productId);
+          loadProducts();
         };
 
         const toggleAvailability = async (productId) => {
-          try {
-            await new Promise((resolve, reject) => {
-              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).toggleProductAvailability({ ProductID: productId });
-            });
-            loadProducts();
-          } catch (e) {
-            console.error('Error toggling availability:', e);
-          }
+          await productModule.toggleAvailability(productId);
+          loadProducts();
+        };
+
+        // Methods - Orders
+        const loadOrders = async () => {
+          await orderModule.loadOrders();
+        };
+
+        const updateStatus = async (orderId, newStatus) => {
+          await orderModule.updateStatus(orderId, newStatus);
+        };
+
+        const exportOrders = async () => {
+          await orderModule.exportCSV();
+        };
+
+        const viewOrderDetail = (order) => {
+          selectedOrder.value = order;
+        };
+
+        const parseCart = (cartJson) => {
+          return orderModule.parseCart(cartJson);
+        };
+
+        // Methods - Settings
+        const loadSettings = async () => {
+          await settingsModule.loadSettings();
         };
 
         const saveSettings = async () => {
-          try {
-            for (const [key, value] of Object.entries(settings.value)) {
-              await new Promise((resolve, reject) => {
-                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).updateSettings({ key, value });
-              });
-            }
+          const result = await settingsModule.saveSettings();
+          if (result.success) {
             alert('Pengaturan tersimpan!');
-          } catch (e) {
-            console.error('Error saving settings:', e);
           }
         };
 
-        const formatDate = (date) => {
-          return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        };
+        // Methods - Image
+        const prevImage = () => imageModule.prevImage();
+        const nextImage = () => imageModule.nextImage();
+        const removeImage = (index) => imageModule.removeImage(index);
 
-        // Image slider methods
-        const prevImage = () => {
-          if (currentImageIndex.value > 0) {
-            currentImageIndex.value--;
-          } else {
-            currentImageIndex.value = productImages.value.length - 1;
-          }
-        };
-
-        const nextImage = () => {
-          if (currentImageIndex.value < productImages.value.length - 1) {
-            currentImageIndex.value++;
-          } else {
-            currentImageIndex.value = 0;
-          }
-        };
-
-        const removeImage = (index) => {
-          productImages.value.splice(index, 1);
-          if (currentImageIndex.value >= productImages.value.length) {
-            currentImageIndex.value = Math.max(0, productImages.value.length - 1);
-          }
-        };
-
-        // Handle image upload for multiple images
         const handleImageUpload = async (event) => {
           const file = event.target.files[0];
           if (!file) return;
 
-          if (!file.type.startsWith('image/')) {
-            uploadError.value = 'File harus berupa gambar';
-            return;
-          }
+          const result = await imageModule.uploadImage(
+            file,
+            editingProduct.value ? editingProduct.value.ProductID : null
+          );
 
-          if (file.size > 5 * 1024 * 1024) {
-            uploadError.value = 'Ukuran maksimal 5MB';
-            return;
-          }
-
-          uploadError.value = '';
-          uploadingImage.value = true;
-
-          try {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-              const base64Data = e.target.result;
-              const result = await new Promise((resolve, reject) => {
-                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).uploadImageBase64({
-                  imageData: base64Data,
-                  fileName: file.name,
-                  productId: editingProduct.value ? editingProduct.value.ProductID : null
-                });
-              });
-
-              uploadingImage.value = false;
-
-              if (result.success) {
-                // Add to productImages array
-                productImages.value.push({
-                  id: result.fileId,
-                  url: result.directLink
-                });
-                // Update form with comma-separated IDs
-                productForm.value.Images = productImages.value.map(img => img.id).join(',');
-              } else {
-                uploadError.value = result.error || 'Gagal upload gambar';
-              }
-            };
-            reader.onerror = () => {
-              uploadingImage.value = false;
-              uploadError.value = 'Gagal membaca file';
-            };
-            reader.readAsDataURL(file);
-          } catch (e) {
-            uploadingImage.value = false;
-            uploadError.value = 'Terjadi kesalahan: ' + e.message;
+          if (!result.success) {
+            uploadError.value = result.error;
           }
         };
 
+        // Methods - Utils
+        const formatDate = (date) => {
+          return date.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        };
+
+        // Lifecycle
         onMounted(() => {
           loadOrders();
           loadProducts();
           loadSettings();
         });
 
+        // Return
         return {
           currentView,
-          orders,
-          products,
+          orders: orderModule.orders,
+          products: productModule.products,
           statusFilter,
           filteredOrders,
           stats,
@@ -817,11 +685,11 @@
           editingProduct,
           productForm,
           selectedOrder,
-          settings,
-          uploadingImage,
+          settings: settingsModule.settings,
+          uploadingImage: imageModule.uploading,
           uploadError,
-          productImages,
-          currentImageIndex,
+          productImages: imageModule.images,
+          currentImageIndex: imageModule.currentIndex,
           prevImage,
           nextImage,
           removeImage,

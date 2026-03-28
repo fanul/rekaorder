@@ -18,16 +18,12 @@
       setup: function() {
         // State
         var loading = ref(true);
-        var products = ref([]);
-        var cart = ref([]);
         var currentTab = ref('home');
-        var selectedCategory = ref('all');
         var selectedProduct = ref(null);
         var productImageIndex = ref(0);
         var quantity = ref(1);
         var showSearch = ref(false);
-        var searchQuery = ref('');
-        var categories = ref(['Makanan', 'Minuman', 'Snack', 'Dessert']);
+        var showSuccessModal = ref(false);
 
         // Customer data
         var customerName = ref('');
@@ -36,49 +32,33 @@
         var deliveryDate = ref('');
         var paymentMethod = ref('Transfer Bank');
 
-        // Order state
-        var myOrders = ref([]);
-        var submitting = ref(false);
-        var deliveryFee = ref(0);
-        var paymentMethods = ref(['Transfer Bank', 'COD', 'E-Wallet']);
+        // Initialize modules
+        var cartModule = new CartModule();
+        var productModule = new ProductDisplayModule();
+        var orderModule = new OrderSubmissionModule();
 
-        // UI state
+        // Toast state
         var toast = ref({ show: false, message: '', type: 'success' });
-        var showSuccessModal = ref(false);
-        var lastOrderId = ref('');
 
         // Computed
         var filteredProducts = computed(function() {
-          var result = products.value;
-          if (selectedCategory.value !== 'all') {
-            result = result.filter(function(p) { return p.Category === selectedCategory.value; });
-          }
-          if (searchQuery.value) {
-            var query = searchQuery.value.toLowerCase();
-            result = result.filter(function(p) {
-              return p.Name.toLowerCase().indexOf(query) > -1 ||
-                     p.Description.toLowerCase().indexOf(query) > -1;
-            });
-          }
-          return result;
+          return productModule.getFiltered();
         });
 
         var cartSubtotal = computed(function() {
-          return cart.value.reduce(function(sum, item) { return sum + (item.price * item.quantity); }, 0);
+          return cartModule.getSubtotal();
         });
 
         var cartTotal = computed(function() {
-          return cartSubtotal.value + deliveryFee.value;
+          return cartModule.getTotal();
         });
 
         var minDeliveryDate = computed(function() {
-          var today = new Date();
-          today.setDate(today.getDate() + 1);
-          return today.toISOString().split('T')[0];
+          return orderModule.getMinDeliveryDate();
         });
 
         var isCartValid = computed(function() {
-          return cart.value.length > 0 &&
+          return !cartModule.isEmpty() &&
                  customerName.value.trim() &&
                  customerPhone.value.trim() &&
                  customerAddress.value.trim() &&
@@ -87,50 +67,23 @@
         });
 
         var whatsappLink = computed(function() {
-          var message = 'Halo RekaOrder, saya ' + customerName.value + ' ingin konfirmasi pesanan saya dengan ID: ' + lastOrderId.value;
-          return 'https://wa.me/?text=' + encodeURIComponent(message);
+          return orderModule.generateWhatsAppLink(
+            orderModule.lastOrderId.value,
+            customerName.value
+          );
         });
 
-        // Methods
+        // Methods - Products
         var loadProducts = function() {
           loading.value = true;
-          google.script.run.withSuccessHandler(function(r) {
-            if (r.success) {
-              products.value = r.products;
-              // Extract unique categories dynamically
-              var uniqueCategories = ['all'];
-              products.value.forEach(function(p) {
-                if (p.Category && uniqueCategories.indexOf(p.Category) === -1) {
-                  uniqueCategories.push(p.Category);
-                }
-              });
-              categories.value = uniqueCategories;
-            }
+          productModule.loadProducts().then(function() {
             loading.value = false;
-          }).getProducts({});
+          });
+          productModule.loadCategories();
         };
 
         var loadSettings = function() {
-          google.script.run.withSuccessHandler(function(r) {
-            deliveryFee.value = Number(r.DELIVERY_FEE) || 0;
-          }).getSettings();
-          // Also load categories from properties
-          google.script.run.withSuccessHandler(function(cats) {
-            if (cats && cats.length > 0) {
-              categories.value = ['all'].concat(cats);
-            }
-          }).getCategories();
-        };
-
-        var loadCart = function() {
-          var saved = localStorage.getItem('rekaorder_cart');
-          if (saved) {
-            cart.value = JSON.parse(saved);
-          }
-        };
-
-        var saveCart = function() {
-          localStorage.setItem('rekaorder_cart', JSON.stringify(cart.value));
+          cartModule.loadDeliveryFee();
         };
 
         var openProductModal = function(product) {
@@ -144,8 +97,7 @@
         };
 
         var increaseQuantity = function() {
-          var isPreorder = selectedProduct.value.ProductType === 'Preorder';
-          var maxQty = isPreorder ? 999 : selectedProduct.value.Stock;
+          var maxQty = productModule.getMaxQuantity(selectedProduct.value);
           if (quantity.value < maxQty) {
             quantity.value++;
           }
@@ -178,162 +130,122 @@
         };
 
         var addToCart = function() {
-          var item = {
-            productId: selectedProduct.value.ProductID,
-            name: selectedProduct.value.Name,
-            price: selectedProduct.value.Price,
-            quantity: quantity.value,
-            ImageURL: selectedProduct.value.ImageURL,
-            LeadTimeDays: selectedProduct.value.LeadTimeDays
-          };
-
-          var existing = cart.value.find(function(c) { return c.productId === item.productId; });
-          if (existing) {
-            existing.quantity += quantity.value;
-          } else {
-            cart.value.push(item);
-          }
-
-          saveCart();
+          cartModule.addItem(selectedProduct.value, quantity.value);
           closeProductModal();
-          showToast('Ditambahkan ke keranjang!', 'success');
+          AppUtils.showToast(toast, 'Ditambahkan ke keranjang!', 'success');
           currentTab.value = 'cart';
         };
 
+        // Methods - Cart
         var updateCartQuantity = function(index, newQty) {
-          if (newQty <= 0) {
-            cart.value.splice(index, 1);
-          } else {
-            cart.value[index].quantity = newQty;
-          }
-          saveCart();
+          cartModule.updateQuantity(index, newQty);
         };
 
         var removeFromCart = function(index) {
-          cart.value.splice(index, 1);
-          saveCart();
+          cartModule.removeItem(index);
         };
 
+        // Methods - Orders
         var submitOrder = function() {
-          if (!isCartValid.value) {
-            showToast('Mohon lengkapi semua data', 'error');
+          var errors = orderModule.validate(
+            customerName.value,
+            customerPhone.value,
+            customerAddress.value,
+            deliveryDate.value,
+            paymentMethod.value
+          );
+
+          if (errors.length > 0) {
+            AppUtils.showToast(toast, errors[0], 'error');
             return;
           }
 
-          submitting.value = true;
-
-          new Promise(function(resolve, reject) {
-            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).submitOrder({
-              customerName: customerName.value,
-              customerPhone: customerPhone.value,
-              customerAddress: customerAddress.value,
-              deliveryDate: deliveryDate.value,
-              paymentMethod: paymentMethod.value,
-              cart: cart.value
-            });
+          orderModule.submit({
+            customerName: customerName.value,
+            customerPhone: customerPhone.value,
+            customerAddress: customerAddress.value,
+            deliveryDate: deliveryDate.value,
+            paymentMethod: paymentMethod.value,
+            cart: cartModule.cart.value
           }).then(function(result) {
             if (result.success) {
-              lastOrderId.value = result.orderId;
-              cart.value = [];
-              saveCart();
+              cartModule.clear();
               showSuccessModal.value = true;
-              myOrders.value.unshift({
-                OrderID: result.orderId,
-                Timestamp: new Date().toISOString(),
-                TotalAmount: result.totalAmount,
-                Status: 'Baru'
-              });
             } else {
-              showToast(result.error || 'Gagal submit pesanan', 'error');
+              AppUtils.showToast(toast, result.error || 'Gagal submit pesanan', 'error');
             }
-          })['catch'](function(error) {
-            console.error('Error submitting order:', error);
-            showToast('Terjadi kesalahan', 'error');
-          })['finally'](function() {
-            submitting.value = false;
           });
         };
 
         var closeSuccessModal = function() {
           showSuccessModal.value = false;
           currentTab.value = 'orders';
-          customerName.value = '';
-          customerPhone.value = '';
-          customerAddress.value = '';
-          deliveryDate.value = '';
+          orderModule.resetForm(
+            customerName,
+            customerPhone,
+            customerAddress,
+            deliveryDate
+          );
         };
 
-        var showToast = function(message, type) {
-          if (type === undefined) type = 'success';
-          toast.value = { show: true, message: message, type: type };
-          setTimeout(function() {
-            toast.value.show = false;
-          }, 3000);
-        };
-
+        // Methods - UI
         var toggleSearch = function() {
           showSearch.value = !showSearch.value;
           if (!showSearch.value) {
-            searchQuery.value = '';
+            productModule.clearSearch();
           }
         };
 
-        var performSearch = function() {};
-
         var clearSearch = function() {
-          searchQuery.value = '';
+          productModule.clearSearch();
         };
 
         var formatDate = function(dateStr) {
-          var date = new Date(dateStr);
-          return date.toLocaleDateString('id-ID', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
+          return AppUtils.formatDate(dateStr);
         };
 
         var handleImageError = function(event) {
-          event.target.style.display = 'none';
+          AppUtils.handleImageError(event);
         };
 
-        watch(cart, saveCart, { deep: true });
+        // Watch cart changes
+        watch(cartModule.cart, function() {
+          cartModule.saveToStorage();
+        }, { deep: true });
 
+        // Lifecycle
         onMounted(function() {
           loadProducts();
           loadSettings();
-          loadCart();
-          var tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          deliveryDate.value = tomorrow.toISOString().split('T')[0];
+          cartModule.loadFromStorage();
+          deliveryDate.value = minDeliveryDate.value;
         });
 
+        // Return
         return {
           scriptUrl: window.scriptUrl || '',
           loading: loading,
-          products: products,
-          cart: cart,
+          products: productModule.products,
+          cart: cartModule.cart,
           currentTab: currentTab,
-          selectedCategory: selectedCategory,
+          selectedCategory: productModule.selectedCategory,
           selectedProduct: selectedProduct,
           quantity: quantity,
           showSearch: showSearch,
-          searchQuery: searchQuery,
-          categories: categories,
+          searchQuery: productModule.searchQuery,
+          categories: productModule.categories,
           customerName: customerName,
           customerPhone: customerPhone,
           customerAddress: customerAddress,
           deliveryDate: deliveryDate,
           paymentMethod: paymentMethod,
-          paymentMethods: paymentMethods,
-          myOrders: myOrders,
-          submitting: submitting,
-          deliveryFee: deliveryFee,
+          paymentMethods: orderModule.paymentMethods,
+          myOrders: orderModule.myOrders,
+          submitting: orderModule.submitting,
+          deliveryFee: cartModule.deliveryFee,
           toast: toast,
           showSuccessModal: showSuccessModal,
-          lastOrderId: lastOrderId,
+          lastOrderId: orderModule.lastOrderId,
           filteredProducts: filteredProducts,
           cartSubtotal: cartSubtotal,
           cartTotal: cartTotal,
@@ -352,9 +264,7 @@
           removeFromCart: removeFromCart,
           submitOrder: submitOrder,
           closeSuccessModal: closeSuccessModal,
-          showToast: showToast,
           toggleSearch: toggleSearch,
-          performSearch: performSearch,
           clearSearch: clearSearch,
           formatDate: formatDate,
           handleImageError: handleImageError
