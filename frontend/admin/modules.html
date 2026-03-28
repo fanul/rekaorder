@@ -1,8 +1,13 @@
 <script>
 /**
- * Product Module - Handles product CRUD operations
+ * Initialize admin modules with Vue reactive functions
  */
-var ProductModule = (function() {
+function initAdminModules(Vue) {
+  var ref = Vue.ref;
+
+  /**
+   * Product Module - Handles product CRUD operations
+   */
   function ProductModule() {
     this.products = ref([]);
     this.loading = ref(false);
@@ -89,13 +94,9 @@ var ProductModule = (function() {
     return 'Rp ' + Number(price).toLocaleString('id-ID');
   };
 
-  return ProductModule;
-})();
-
-/**
- * Order Module - Handles order management operations
- */
-var OrderModule = (function() {
+  /**
+   * Order Module - Handles order management operations
+   */
   function OrderModule() {
     this.orders = ref([]);
     this.loading = ref(false);
@@ -191,13 +192,9 @@ var OrderModule = (function() {
     return 'Rp ' + Number(price).toLocaleString('id-ID');
   };
 
-  return OrderModule;
-})();
-
-/**
- * Image Module - Handles image upload and management
- */
-var ImageModule = (function() {
+  /**
+   * Image Module - Handles image upload and management
+   */
   function ImageModule() {
     this.images = ref([]);
     this.currentIndex = ref(0);
@@ -295,13 +292,9 @@ var ImageModule = (function() {
     this.error.value = null;
   };
 
-  return ImageModule;
-})();
-
-/**
- * Settings Module - Handles settings and categories management
- */
-var SettingsModule = (function() {
+  /**
+   * Settings Module - Handles settings and categories management
+   */
   function SettingsModule() {
     this.settings = ref({
       STORE_NAME: '',
@@ -406,6 +399,12 @@ var SettingsModule = (function() {
     });
   };
 
-  return SettingsModule;
-})();
+  // Return initialized modules
+  return {
+    ProductModule: ProductModule,
+    OrderModule: OrderModule,
+    ImageModule: ImageModule,
+    SettingsModule: SettingsModule
+  };
+}
 </script>

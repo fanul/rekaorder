@@ -1,6 +1,6 @@
 <script>
 /**
- * Utils Module - Shared utility functions
+ * Shared utility functions
  */
 var AppUtils = {
   formatPrice: function(price) {
@@ -32,9 +32,14 @@ var AppUtils = {
 };
 
 /**
- * Cart Module - Handles shopping cart operations
+ * Initialize modules with Vue reactive functions
  */
-var CartModule = (function() {
+function initCustomerModules(Vue) {
+  var ref = Vue.ref;
+
+  /**
+   * Cart Module - Handles shopping cart operations
+   */
   function CartModule() {
     this.cart = ref([]);
     this.deliveryFee = ref(0);
@@ -117,13 +122,9 @@ var CartModule = (function() {
       .getSettings();
   };
 
-  return CartModule;
-})();
-
-/**
- * Product Display Module - Handles product display and filtering
- */
-var ProductDisplayModule = (function() {
+  /**
+   * Product Display Module - Handles product display and filtering
+   */
   function ProductDisplayModule() {
     this.products = ref([]);
     this.categories = ref(['Makanan', 'Minuman', 'Snack', 'Dessert']);
@@ -178,6 +179,7 @@ var ProductDisplayModule = (function() {
 
   ProductDisplayModule.prototype.getFiltered = function() {
     var result = this.products.value;
+    var self = this;
 
     if (this.selectedCategory.value !== 'all') {
       result = result.filter(function(p) { return p.Category === self.selectedCategory.value; });
@@ -203,13 +205,9 @@ var ProductDisplayModule = (function() {
     this.searchQuery.value = '';
   };
 
-  return ProductDisplayModule;
-})();
-
-/**
- * Order Submission Module - Handles order submission
- */
-var OrderSubmissionModule = (function() {
+  /**
+   * Order Submission Module - Handles order submission
+   */
   function OrderSubmissionModule() {
     this.submitting = ref(false);
     this.lastOrderId = ref('');
@@ -281,6 +279,11 @@ var OrderSubmissionModule = (function() {
     deliveryDateRef.value = this.getMinDeliveryDate();
   };
 
-  return OrderSubmissionModule;
-})();
+  // Return initialized modules
+  return {
+    CartModule: CartModule,
+    ProductDisplayModule: ProductDisplayModule,
+    OrderSubmissionModule: OrderSubmissionModule
+  };
+}
 </script>

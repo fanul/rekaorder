@@ -32,10 +32,11 @@
         var deliveryDate = ref('');
         var paymentMethod = ref('Transfer Bank');
 
-        // Initialize modules
-        var cartModule = new CartModule();
-        var productModule = new ProductDisplayModule();
-        var orderModule = new OrderSubmissionModule();
+        // Initialize modules with Vue
+        var modules = initCustomerModules(Vue);
+        var cartModule = new modules.CartModule();
+        var productModule = new modules.ProductDisplayModule();
+        var orderModule = new modules.OrderSubmissionModule();
 
         // Toast state
         var toast = ref({ show: false, message: '', type: 'success' });

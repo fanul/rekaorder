@@ -37,11 +37,12 @@
           Tags: ''
         });
 
-        // Initialize modules
-        var productModule = new ProductModule();
-        var orderModule = new OrderModule();
-        var imageModule = new ImageModule();
-        var settingsModule = new SettingsModule();
+        // Initialize modules with Vue
+        var modules = initAdminModules(Vue);
+        var productModule = new modules.ProductModule();
+        var orderModule = new modules.OrderModule();
+        var imageModule = new modules.ImageModule();
+        var settingsModule = new modules.SettingsModule();
 
         // Computed
         var filteredOrders = computed(function() {
