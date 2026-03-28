@@ -124,4 +124,6 @@ class OrderModule {
 }
 
 // Export for use in dashboard
-window.OrderModule = OrderModule;
+if (typeof window !== 'undefined') {
+  window.OrderModule = OrderModule;
+}

@@ -118,4 +118,6 @@ class OrderSubmissionModule {
 }
 
 // Export for use in customer app
-window.OrderSubmissionModule = OrderSubmissionModule;
+if (typeof window !== 'undefined') {
+  window.OrderSubmissionModule = OrderSubmissionModule;
+}

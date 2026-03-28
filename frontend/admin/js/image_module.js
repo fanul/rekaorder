@@ -165,4 +165,6 @@ class ImageModule {
 }
 
 // Export for use in dashboard
-window.ImageModule = ImageModule;
+if (typeof window !== 'undefined') {
+  window.ImageModule = ImageModule;
+}

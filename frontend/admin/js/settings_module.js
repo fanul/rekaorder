@@ -11,8 +11,10 @@ class SettingsModule {
       DELIVERY_FEE: '0',
       WAHA_URL: '',
       WAHA_SESSION: 'default',
-      ADMIN_PHONE: ''
+      ADMIN_PHONE: '',
+      ADMIN_EMAILS: ''
     });
+    this.categories = ref(['Makanan', 'Minuman', 'Snack', 'Dessert']);
     this.loading = ref(false);
     this.error = ref(null);
   }
@@ -27,12 +29,35 @@ class SettingsModule {
     try {
       const result = await this.callBackend('getSettings');
       this.settings.value = { ...this.settings.value, ...result };
+      // Also load categories
+      await this.loadCategories();
     } catch (e) {
       console.error('Error loading settings:', e);
       this.error.value = e.message;
     } finally {
       this.loading.value = false;
     }
+  }
+
+  /**
+   * Load categories from backend
+   */
+  async loadCategories() {
+    try {
+      const cats = await this.callBackend('getCategories');
+      if (cats && cats.length > 0) {
+        this.categories.value = cats;
+      }
+    } catch (e) {
+      console.error('Error loading categories:', e);
+    }
+  }
+
+  /**
+   * Save categories to backend
+   */
+  saveCategories() {
+    this.callBackend('setCategories', this.categories.value.join(', '));
   }
 
   /**
@@ -82,6 +107,18 @@ class SettingsModule {
   }
 
   /**
+   * Format date to Indonesian locale
+   */
+  formatDate(date) {
+    return date.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  /**
    * Helper: Call GAS backend
    */
   callBackend(functionName, params) {
@@ -95,4 +132,6 @@ class SettingsModule {
 }
 
 // Export for use in dashboard
-window.SettingsModule = SettingsModule;
+if (typeof window !== 'undefined') {
+  window.SettingsModule = SettingsModule;
+}

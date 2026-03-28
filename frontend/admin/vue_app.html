@@ -15,29 +15,13 @@
 
     createApp({
       setup: function() {
+        // State
         var currentView = ref('orders');
-        var orders = ref([]);
-        var products = ref([]);
         var statusFilter = ref('');
-        var stats = ref({ total: 0, baru: 0, diproses: 0, selesai: 0, totalRevenue: 0 });
         var showAddProduct = ref(false);
         var editingProduct = ref(null);
         var selectedOrder = ref(null);
-        var uploadingImage = ref(false);
         var uploadError = ref('');
-        var productImages = ref([]);
-        var currentImageIndex = ref(0);
-        var settings = ref({
-          STORE_NAME: '',
-          MIN_ORDER_AMOUNT: '0',
-          DELIVERY_FEE: '0',
-          WAHA_URL: '',
-          WAHA_SESSION: 'default',
-          ADMIN_PHONE: '',
-          ADMIN_EMAILS: ''
-        });
-
-        var categories = ref(['Makanan', 'Minuman', 'Snack', 'Dessert']);
         var newCategory = ref('');
 
         var productForm = ref({
@@ -49,144 +33,32 @@
           LeadTimeDays: 0,
           Stock: 0,
           DailyCapacity: 0,
-          ImageURL: '',
+          Images: '',
           Tags: ''
         });
 
+        // Initialize modules
+        var productModule = new ProductModule();
+        var orderModule = new OrderModule();
+        var imageModule = new ImageModule();
+        var settingsModule = new SettingsModule();
+
+        // Computed
         var filteredOrders = computed(function() {
-          if (!statusFilter.value) return orders.value;
-          return orders.value.filter(function(o) { return o.Status === statusFilter.value; });
+          return orderModule.filterByStatus(orderModule.orders.value, statusFilter.value);
         });
 
-        var loadOrders = function() {
-          return new Promise(function(resolve, reject) {
-            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getAllOrders({});
-          }).then(function(result) {
-            if (result.success) {
-              orders.value = result.orders;
-              updateStats();
-            }
-          })['catch'](function(e) {
-            console.error('Error loading orders:', e);
-          });
-        };
+        var stats = computed(function() {
+          return orderModule.getStats();
+        });
 
+        var categories = computed(function() {
+          return settingsModule.categories.value;
+        });
+
+        // Methods - Products
         var loadProducts = function() {
-          return new Promise(function(resolve, reject) {
-            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getProductsAdmin({});
-          }).then(function(result) {
-            if (result.success) {
-              products.value = result.products;
-            }
-          })['catch'](function(e) {
-            console.error('Error loading products:', e);
-          });
-        };
-
-        var loadSettings = function() {
-          return new Promise(function(resolve, reject) {
-            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getSettings();
-          }).then(function(result) {
-            var newSettings = {};
-            for (var key in settings.value) {
-              newSettings[key] = settings.value[key];
-            }
-            for (var key in result) {
-              newSettings[key] = result[key];
-            }
-            settings.value = newSettings;
-            // Also load categories
-            google.script.run.withSuccessHandler(function(cats) {
-              if (cats && cats.length > 0) {
-                categories.value = cats;
-              }
-            }).getCategories();
-          })['catch'](function(e) {
-            console.error('Error loading settings:', e);
-          });
-        };
-
-        var loadCategories = function() {
-          google.script.run.withSuccessHandler(function(cats) {
-            if (cats && cats.length > 0) {
-              categories.value = cats;
-            }
-          }).getCategories();
-        };
-
-        var addCategory = function() {
-          var cat = newCategory.value.trim();
-          if (!cat) return;
-          if (categories.value.indexOf(cat) > -1) {
-            alert('Kategori sudah ada!');
-            return;
-          }
-          categories.value.push(cat);
-          saveCategories();
-          newCategory.value = '';
-        };
-
-        var removeCategory = function(index) {
-          categories.value.splice(index, 1);
-          saveCategories();
-        };
-
-        var saveCategories = function() {
-          google.script.run.withSuccessHandler(function() {
-            // Categories saved
-          }).setCategories(categories.value.join(', '));
-        };
-
-        var updateStats = function() {
-          stats.value = orders.value.reduce(function(acc, o) {
-            acc.total++;
-            if (o.Status === 'Baru') acc.baru++;
-            if (['Dikonfirmasi', 'Diproses', 'Siap'].indexOf(o.Status) > -1) acc.diproses++;
-            if (o.Status === 'Selesai') {
-              acc.selesai++;
-              acc.totalRevenue += Number(o.TotalAmount) || 0;
-            }
-            return acc;
-          }, { total: 0, baru: 0, diproses: 0, selesai: 0, totalRevenue: 0 });
-        };
-
-        var updateStatus = function(orderId, newStatus) {
-          return new Promise(function(resolve, reject) {
-            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).updateOrderStatus({
-              orderId: orderId,
-              status: newStatus
-            });
-          }).then(function() {
-            var order = orders.value.find(function(o) { return o.OrderID === orderId; });
-            if (order) order.Status = newStatus;
-            updateStats();
-          })['catch'](function(e) {
-            console.error('Error updating status:', e);
-          });
-        };
-
-        var exportOrders = function() {
-          return new Promise(function(resolve, reject) {
-            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).exportOrdersCSV({});
-          }).then(function(result) {
-            if (result.success && result.fileUrl) {
-              window.open(result.fileUrl, '_blank');
-            }
-          })['catch'](function(e) {
-            console.error('Error exporting:', e);
-          });
-        };
-
-        var viewOrderDetail = function(order) {
-          selectedOrder.value = order;
-        };
-
-        var parseCart = function(cartJson) {
-          try {
-            return JSON.parse(cartJson);
-          } catch(e) {
-            return [];
-          }
+          return productModule.loadProducts();
         };
 
         var editProduct = function(product) {
@@ -203,180 +75,153 @@
             Images: product.Images ? product.Images.map(function(img) { return img.id; }).join(',') : '',
             Tags: product.Tags || ''
           };
-          productImages.value = product.Images || [];
-          currentImageIndex.value = 0;
+          imageModule.loadImages(product);
           showAddProduct.value = true;
         };
 
         var closeProductModal = function() {
           showAddProduct.value = false;
           editingProduct.value = null;
-          productForm.value = { Name: '', Description: '', Category: 'Makanan', Price: 0, ProductType: 'Regular', LeadTimeDays: 0, Stock: 0, DailyCapacity: 0, Images: '', Tags: '' };
-          productImages.value = [];
-          currentImageIndex.value = 0;
+          productForm.value = productModule.getDefaultForm();
+          imageModule.reset();
         };
 
         var saveProduct = function() {
-          return new Promise(function(resolve, reject) {
-            if (editingProduct.value) {
-              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).updateProduct({
-                ProductID: editingProduct.value.ProductID,
-                Name: productForm.value.Name,
-                Description: productForm.value.Description,
-                Category: productForm.value.Category,
-                Price: productForm.value.Price,
-                ProductType: productForm.value.ProductType,
-                LeadTimeDays: productForm.value.LeadTimeDays,
-                Stock: productForm.value.Stock,
-                DailyCapacity: productForm.value.DailyCapacity,
-                Images: productImages.value.map(function(img) { return img.id; }).join(','),
-                Tags: productForm.value.Tags
-              });
-            } else {
-              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).addProduct({
-                Name: productForm.value.Name,
-                Description: productForm.value.Description,
-                Category: productForm.value.Category,
-                Price: productForm.value.Price,
-                ProductType: productForm.value.ProductType,
-                LeadTimeDays: productForm.value.LeadTimeDays,
-                Stock: productForm.value.Stock,
-                DailyCapacity: productForm.value.DailyCapacity,
-                Images: productImages.value.map(function(img) { return img.id; }).join(','),
-                Tags: productForm.value.Tags
-              });
-            }
-          }).then(function() {
+          var productData = {
+            Name: productForm.value.Name,
+            Description: productForm.value.Description,
+            Category: productForm.value.Category,
+            Price: productForm.value.Price,
+            ProductType: productForm.value.ProductType,
+            LeadTimeDays: productForm.value.LeadTimeDays,
+            Stock: productForm.value.Stock,
+            DailyCapacity: productForm.value.DailyCapacity,
+            Images: imageModule.getImageIds(),
+            Tags: productForm.value.Tags
+          };
+
+          var promise;
+          if (editingProduct.value) {
+            productData.ProductID = editingProduct.value.ProductID;
+            promise = productModule.updateProduct(productData);
+          } else {
+            promise = productModule.addProduct(productData);
+          }
+
+          return promise.then(function() {
             closeProductModal();
             loadProducts();
-          })['catch'](function(e) {
-            console.error('Error saving product:', e);
           });
         };
 
         var deleteProduct = function(productId) {
           if (!confirm('Yakin ingin menghapus produk ini?')) return;
-          return new Promise(function(resolve, reject) {
-            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).deleteProduct({ ProductID: productId });
-          }).then(function() {
+          return productModule.deleteProduct(productId).then(function() {
             loadProducts();
-          })['catch'](function(e) {
-            console.error('Error deleting product:', e);
           });
         };
 
         var toggleAvailability = function(productId) {
-          return new Promise(function(resolve, reject) {
-            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).toggleProductAvailability({ ProductID: productId });
-          }).then(function() {
+          return productModule.toggleAvailability(productId).then(function() {
             loadProducts();
-          })['catch'](function(e) {
-            console.error('Error toggling availability:', e);
           });
+        };
+
+        // Methods - Orders
+        var loadOrders = function() {
+          return orderModule.loadOrders();
+        };
+
+        var updateStatus = function(orderId, newStatus) {
+          return orderModule.updateStatus(orderId, newStatus);
+        };
+
+        var exportOrders = function() {
+          return orderModule.exportCSV();
+        };
+
+        var viewOrderDetail = function(order) {
+          selectedOrder.value = order;
+        };
+
+        var parseCart = function(cartJson) {
+          return orderModule.parseCart(cartJson);
+        };
+
+        // Methods - Settings
+        var loadSettings = function() {
+          return settingsModule.loadSettings();
         };
 
         var saveSettings = function() {
-          var promises = [];
-          for (var key in settings.value) {
-            (function(k) {
-              promises.push(new Promise(function(resolve, reject) {
-                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).updateSettings({ key: k, value: settings.value[k] });
-              }));
-            })(key);
-          }
-          Promise.all(promises).then(function() {
-            alert('Pengaturan tersimpan!');
-          })['catch'](function(e) {
-            console.error('Error saving settings:', e);
+          return settingsModule.saveSettings().then(function(result) {
+            if (result.success) {
+              alert('Pengaturan tersimpan!');
+            }
           });
         };
 
-        var formatDate = function(date) {
-          return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        // Methods - Categories
+        var addCategory = function() {
+          var cat = newCategory.value.trim();
+          if (!cat) return;
+          if (categories.value.indexOf(cat) > -1) {
+            alert('Kategori sudah ada!');
+            return;
+          }
+          settingsModule.categories.value.push(cat);
+          settingsModule.saveCategories();
+          newCategory.value = '';
         };
 
+        var removeCategory = function(index) {
+          settingsModule.categories.value.splice(index, 1);
+          settingsModule.saveCategories();
+        };
+
+        // Methods - Image
         var prevImage = function() {
-          if (currentImageIndex.value > 0) {
-            currentImageIndex.value--;
-          } else {
-            currentImageIndex.value = productImages.value.length - 1;
-          }
+          imageModule.prevImage();
         };
 
         var nextImage = function() {
-          if (currentImageIndex.value < productImages.value.length - 1) {
-            currentImageIndex.value++;
-          } else {
-            currentImageIndex.value = 0;
-          }
+          imageModule.nextImage();
         };
 
         var removeImage = function(index) {
-          productImages.value.splice(index, 1);
-          if (currentImageIndex.value >= productImages.value.length) {
-            currentImageIndex.value = Math.max(0, productImages.value.length - 1);
-          }
+          imageModule.removeImage(index);
         };
 
         var handleImageUpload = function(event) {
           var file = event.target.files[0];
           if (!file) return;
 
-          if (!file.type.startsWith('image/')) {
-            uploadError.value = 'File harus berupa gambar';
-            return;
-          }
-
-          if (file.size > 5 * 1024 * 1024) {
-            uploadError.value = 'Ukuran maksimal 5MB';
-            return;
-          }
-
-          uploadError.value = '';
-          uploadingImage.value = true;
-
-          var reader = new FileReader();
-          reader.onload = function(e) {
-            var base64Data = e.target.result;
-            new Promise(function(resolve, reject) {
-              google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).uploadImageBase64({
-                imageData: base64Data,
-                fileName: file.name,
-                productId: editingProduct.value ? editingProduct.value.ProductID : null
-              });
-            }).then(function(result) {
-              uploadingImage.value = false;
-              if (result.success) {
-                productImages.value.push({
-                  id: result.fileId,
-                  url: result.directLink
-                });
-              } else {
-                uploadError.value = result.error || 'Gagal upload gambar';
+          imageModule.uploadImage(file, editingProduct.value ? editingProduct.value.ProductID : null)
+            .then(function(result) {
+              if (!result.success) {
+                uploadError.value = result.error;
               }
-            })['catch'](function(e) {
-              uploadingImage.value = false;
-              uploadError.value = 'Terjadi kesalahan: ' + e.message;
             });
-          };
-          reader.onerror = function() {
-            uploadingImage.value = false;
-            uploadError.value = 'Gagal membaca file';
-          };
-          reader.readAsDataURL(file);
         };
 
+        // Methods - Utils
+        var formatDate = function(date) {
+          return settingsModule.formatDate(date);
+        };
+
+        // Lifecycle
         onMounted(function() {
           loadOrders();
           loadProducts();
           loadSettings();
         });
 
+        // Return
         return {
           scriptUrl: window.scriptUrl || '',
           currentView: currentView,
-          orders: orders,
-          products: products,
+          orders: orderModule.orders,
+          products: productModule.products,
           statusFilter: statusFilter,
           filteredOrders: filteredOrders,
           stats: stats,
@@ -384,15 +229,15 @@
           editingProduct: editingProduct,
           productForm: productForm,
           selectedOrder: selectedOrder,
-          settings: settings,
-          categories: categories,
+          settings: settingsModule.settings,
+          categories: settingsModule.categories,
           newCategory: newCategory,
           addCategory: addCategory,
           removeCategory: removeCategory,
-          uploadingImage: uploadingImage,
+          uploadingImage: imageModule.uploading,
           uploadError: uploadError,
-          productImages: productImages,
-          currentImageIndex: currentImageIndex,
+          productImages: imageModule.images,
+          currentImageIndex: imageModule.currentIndex,
           prevImage: prevImage,
           nextImage: nextImage,
           removeImage: removeImage,

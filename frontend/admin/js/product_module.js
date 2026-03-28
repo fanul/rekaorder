@@ -105,8 +105,10 @@ class ProductModule {
       Description: '',
       Category: 'Makanan',
       Price: 0,
+      ProductType: 'Regular',
       LeadTimeDays: 0,
       Stock: 0,
+      DailyCapacity: 0,
       Images: '',
       Tags: ''
     };
@@ -121,4 +123,6 @@ class ProductModule {
 }
 
 // Export for use in dashboard
-window.ProductModule = ProductModule;
+if (typeof window !== 'undefined') {
+  window.ProductModule = ProductModule;
+}

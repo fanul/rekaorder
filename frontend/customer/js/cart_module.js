@@ -143,4 +143,6 @@ class CartModule {
 }
 
 // Export for use in customer app
-window.CartModule = CartModule;
+if (typeof window !== 'undefined') {
+  window.CartModule = CartModule;
+}

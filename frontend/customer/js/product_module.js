@@ -151,4 +151,6 @@ class ProductDisplayModule {
 }
 
 // Export for use in customer app
-window.ProductDisplayModule = ProductDisplayModule;
+if (typeof window !== 'undefined') {
+  window.ProductDisplayModule = ProductDisplayModule;
+}
