@@ -105,4 +105,6 @@ const AppUtils = {
 };
 
 // Export for use in apps
-window.AppUtils = AppUtils;
+if (typeof window !== 'undefined') {
+  window.AppUtils = AppUtils;
+}
