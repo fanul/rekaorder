@@ -1,0 +1,286 @@
+<script>
+/**
+ * Utils Module - Shared utility functions
+ */
+var AppUtils = {
+  formatPrice: function(price) {
+    return 'Rp ' + Number(price).toLocaleString('id-ID');
+  },
+
+  formatDate: function(dateStr) {
+    var date = new Date(dateStr);
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  },
+
+  showToast: function(toastRef, message, type) {
+    if (type === undefined) type = 'success';
+    toastRef.value = { show: true, message: message, type: type };
+    setTimeout(function() {
+      toastRef.value.show = false;
+    }, 3000);
+  },
+
+  handleImageError: function(event) {
+    event.target.style.display = 'none';
+  }
+};
+
+/**
+ * Cart Module - Handles shopping cart operations
+ */
+var CartModule = (function() {
+  function CartModule() {
+    this.cart = ref([]);
+    this.deliveryFee = ref(0);
+  }
+
+  CartModule.prototype.loadFromStorage = function() {
+    var saved = localStorage.getItem('rekaorder_cart');
+    if (saved) {
+      try {
+        this.cart.value = JSON.parse(saved);
+      } catch (e) {
+        this.cart.value = [];
+      }
+    }
+  };
+
+  CartModule.prototype.saveToStorage = function() {
+    localStorage.setItem('rekaorder_cart', JSON.stringify(this.cart.value));
+  };
+
+  CartModule.prototype.addItem = function(product, quantity) {
+    var item = {
+      productId: product.ProductID,
+      name: product.Name,
+      price: product.Price,
+      quantity: quantity,
+      ImageURL: product.ImageURL,
+      LeadTimeDays: product.LeadTimeDays || 0
+    };
+
+    var existing = this.cart.value.find(function(c) { return c.productId === item.productId; });
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      this.cart.value.push(item);
+    }
+
+    this.saveToStorage();
+  };
+
+  CartModule.prototype.updateQuantity = function(index, newQty) {
+    if (newQty <= 0) {
+      this.removeItem(index);
+    } else {
+      this.cart.value[index].quantity = newQty;
+      this.saveToStorage();
+    }
+  };
+
+  CartModule.prototype.removeItem = function(index) {
+    if (index >= 0 && index < this.cart.value.length) {
+      this.cart.value.splice(index, 1);
+      this.saveToStorage();
+    }
+  };
+
+  CartModule.prototype.clear = function() {
+    this.cart.value = [];
+    this.saveToStorage();
+  };
+
+  CartModule.prototype.getSubtotal = function() {
+    return this.cart.value.reduce(function(sum, item) { return sum + (item.price * item.quantity); }, 0);
+  };
+
+  CartModule.prototype.getTotal = function() {
+    return this.getSubtotal() + this.deliveryFee.value;
+  };
+
+  CartModule.prototype.isEmpty = function() {
+    return this.cart.value.length === 0;
+  };
+
+  CartModule.prototype.loadDeliveryFee = function() {
+    var self = this;
+    google.script.run
+      .withSuccessHandler(function(r) {
+        self.deliveryFee.value = Number(r.DELIVERY_FEE) || 0;
+      })
+      .getSettings();
+  };
+
+  return CartModule;
+})();
+
+/**
+ * Product Display Module - Handles product display and filtering
+ */
+var ProductDisplayModule = (function() {
+  function ProductDisplayModule() {
+    this.products = ref([]);
+    this.categories = ref(['Makanan', 'Minuman', 'Snack', 'Dessert']);
+    this.selectedCategory = ref('all');
+    this.searchQuery = ref('');
+    this.loading = ref(true);
+  }
+
+  ProductDisplayModule.prototype.loadProducts = function() {
+    var self = this;
+    this.loading.value = true;
+
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            self.products.value = result.products || [];
+            self.extractCategories();
+          }
+          self.loading.value = false;
+          resolve();
+        })
+        .withFailureHandler(function(e) {
+          self.loading.value = false;
+          reject(e);
+        })
+        .getProducts({});
+    });
+  };
+
+  ProductDisplayModule.prototype.loadCategories = function() {
+    var self = this;
+    google.script.run
+      .withSuccessHandler(function(cats) {
+        if (cats && cats.length > 0) {
+          self.categories.value = ['all'].concat(cats);
+        }
+      })
+      .getCategories();
+  };
+
+  ProductDisplayModule.prototype.extractCategories = function() {
+    var uniqueCategories = ['all'];
+    var self = this;
+    this.products.value.forEach(function(p) {
+      if (p.Category && uniqueCategories.indexOf(p.Category) === -1) {
+        uniqueCategories.push(p.Category);
+      }
+    });
+    this.categories.value = uniqueCategories;
+  };
+
+  ProductDisplayModule.prototype.getFiltered = function() {
+    var result = this.products.value;
+
+    if (this.selectedCategory.value !== 'all') {
+      result = result.filter(function(p) { return p.Category === self.selectedCategory.value; });
+    }
+
+    if (this.searchQuery.value) {
+      var query = this.searchQuery.value.toLowerCase();
+      result = result.filter(function(p) {
+        return p.Name.toLowerCase().indexOf(query) > -1 ||
+               (p.Description && p.Description.toLowerCase().indexOf(query) > -1);
+      });
+    }
+
+    return result;
+  };
+
+  ProductDisplayModule.prototype.getMaxQuantity = function(product) {
+    if (product.ProductType === 'Preorder') return 999;
+    return product.Stock || 0;
+  };
+
+  ProductDisplayModule.prototype.clearSearch = function() {
+    this.searchQuery.value = '';
+  };
+
+  return ProductDisplayModule;
+})();
+
+/**
+ * Order Submission Module - Handles order submission
+ */
+var OrderSubmissionModule = (function() {
+  function OrderSubmissionModule() {
+    this.submitting = ref(false);
+    this.lastOrderId = ref('');
+    this.myOrders = ref([]);
+    this.paymentMethods = ref(['Transfer Bank', 'COD', 'E-Wallet']);
+  }
+
+  OrderSubmissionModule.prototype.validate = function(customerName, customerPhone, customerAddress, deliveryDate, paymentMethod) {
+    var errors = [];
+    if (!customerName || !customerName.trim()) errors.push('Nama harus diisi');
+    if (!customerPhone || !customerPhone.trim()) errors.push('Nomor WhatsApp harus diisi');
+    if (!customerAddress || !customerAddress.trim()) errors.push('Alamat harus diisi');
+    if (!deliveryDate) errors.push('Tanggal pengambilan harus diisi');
+    if (!paymentMethod) errors.push('Metode pembayaran harus dipilih');
+    return errors;
+  };
+
+  OrderSubmissionModule.prototype.submit = function(orderData) {
+    var self = this;
+    this.submitting.value = true;
+
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          self.submitting.value = false;
+          if (result.success) {
+            self.lastOrderId.value = result.orderId;
+            self.myOrders.value.unshift({
+              OrderID: result.orderId,
+              Timestamp: new Date().toISOString(),
+              TotalAmount: result.totalAmount,
+              Status: 'Baru'
+            });
+            resolve({ success: true, orderId: result.orderId });
+          } else {
+            resolve({ success: false, error: result.error || 'Gagal submit pesanan' });
+          }
+        })
+        .withFailureHandler(function(e) {
+          self.submitting.value = false;
+          reject(e);
+        })
+        .submitOrder({
+          customerName: orderData.customerName,
+          customerPhone: orderData.customerPhone,
+          customerAddress: orderData.customerAddress,
+          deliveryDate: orderData.deliveryDate,
+          paymentMethod: orderData.paymentMethod,
+          cart: orderData.cart
+        });
+    });
+  };
+
+  OrderSubmissionModule.prototype.getMinDeliveryDate = function() {
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  };
+
+  OrderSubmissionModule.prototype.generateWhatsAppLink = function(orderId, customerName) {
+    var message = 'Halo RekaOrder, saya ' + customerName + ' ingin konfirmasi pesanan saya dengan ID: ' + orderId;
+    return 'https://wa.me/?text=' + encodeURIComponent(message);
+  };
+
+  OrderSubmissionModule.prototype.resetForm = function(customerNameRef, customerPhoneRef, customerAddressRef, deliveryDateRef) {
+    customerNameRef.value = '';
+    customerPhoneRef.value = '';
+    customerAddressRef.value = '';
+    deliveryDateRef.value = this.getMinDeliveryDate();
+  };
+
+  return OrderSubmissionModule;
+})();
+</script>

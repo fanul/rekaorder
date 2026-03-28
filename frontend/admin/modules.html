@@ -1,0 +1,411 @@
+<script>
+/**
+ * Product Module - Handles product CRUD operations
+ */
+var ProductModule = (function() {
+  function ProductModule() {
+    this.products = ref([]);
+    this.loading = ref(false);
+    this.error = ref(null);
+  }
+
+  ProductModule.prototype.loadProducts = function() {
+    var self = this;
+    this.loading.value = true;
+    this.error.value = null;
+
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            self.products.value = result.products || [];
+          } else {
+            self.error.value = result.error || 'Gagal memuat produk';
+          }
+          self.loading.value = false;
+          resolve(result);
+        })
+        .withFailureHandler(function(e) {
+          self.loading.value = false;
+          self.error.value = e.message;
+          reject(e);
+        })
+        .getProductsAdmin({});
+    });
+  };
+
+  ProductModule.prototype.addProduct = function(productData) {
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .addProduct(productData);
+    });
+  };
+
+  ProductModule.prototype.updateProduct = function(productData) {
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .updateProduct(productData);
+    });
+  };
+
+  ProductModule.prototype.deleteProduct = function(productId) {
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .deleteProduct({ ProductID: productId });
+    });
+  };
+
+  ProductModule.prototype.toggleAvailability = function(productId) {
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .toggleProductAvailability({ ProductID: productId });
+    });
+  };
+
+  ProductModule.prototype.getDefaultForm = function() {
+    return {
+      Name: '',
+      Description: '',
+      Category: 'Makanan',
+      Price: 0,
+      ProductType: 'Regular',
+      LeadTimeDays: 0,
+      Stock: 0,
+      DailyCapacity: 0,
+      Images: '',
+      Tags: ''
+    };
+  };
+
+  ProductModule.prototype.formatPrice = function(price) {
+    return 'Rp ' + Number(price).toLocaleString('id-ID');
+  };
+
+  return ProductModule;
+})();
+
+/**
+ * Order Module - Handles order management operations
+ */
+var OrderModule = (function() {
+  function OrderModule() {
+    this.orders = ref([]);
+    this.loading = ref(false);
+    this.error = ref(null);
+  }
+
+  OrderModule.prototype.loadOrders = function() {
+    var self = this;
+    this.loading.value = true;
+    this.error.value = null;
+
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            self.orders.value = result.orders || [];
+          } else {
+            self.error.value = result.error || 'Gagal memuat pesanan';
+          }
+          self.loading.value = false;
+          resolve(result);
+        })
+        .withFailureHandler(function(e) {
+          self.loading.value = false;
+          self.error.value = e.message;
+          reject(e);
+        })
+        .getAllOrders({});
+    });
+  };
+
+  OrderModule.prototype.updateStatus = function(orderId, newStatus) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          var order = self.orders.value.find(function(o) { return o.OrderID === orderId; });
+          if (order) order.Status = newStatus;
+          resolve(result);
+        })
+        .withFailureHandler(reject)
+        .updateOrderStatus({ orderId: orderId, status: newStatus });
+    });
+  };
+
+  OrderModule.prototype.exportCSV = function() {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success && result.fileUrl) {
+            window.open(result.fileUrl, '_blank');
+            resolve({ success: true });
+          } else {
+            resolve({ success: false, error: 'Gagal export' });
+          }
+        })
+        .withFailureHandler(function(e) {
+          resolve({ success: false, error: e.message });
+        })
+        .exportOrdersCSV({});
+    });
+  };
+
+  OrderModule.prototype.parseCart = function(cartJson) {
+    try {
+      return JSON.parse(cartJson);
+    } catch (e) {
+      return [];
+    }
+  };
+
+  OrderModule.prototype.getStats = function() {
+    var self = this;
+    return this.orders.value.reduce(function(acc, o) {
+      acc.total++;
+      if (o.Status === 'Baru') acc.baru++;
+      if (['Dikonfirmasi', 'Diproses', 'Siap'].indexOf(o.Status) > -1) acc.diproses++;
+      if (o.Status === 'Selesai') {
+        acc.selesai++;
+        acc.totalRevenue += Number(o.TotalAmount) || 0;
+      }
+      return acc;
+    }, { total: 0, baru: 0, diproses: 0, selesai: 0, totalRevenue: 0 });
+  };
+
+  OrderModule.prototype.filterByStatus = function(orders, status) {
+    if (!status) return orders;
+    return orders.filter(function(o) { return o.Status === status; });
+  };
+
+  OrderModule.prototype.formatPrice = function(price) {
+    return 'Rp ' + Number(price).toLocaleString('id-ID');
+  };
+
+  return OrderModule;
+})();
+
+/**
+ * Image Module - Handles image upload and management
+ */
+var ImageModule = (function() {
+  function ImageModule() {
+    this.images = ref([]);
+    this.currentIndex = ref(0);
+    this.uploading = ref(false);
+    this.error = ref(null);
+  }
+
+  ImageModule.prototype.loadImages = function(product) {
+    this.images.value = product.Images || [];
+    this.currentIndex.value = 0;
+  };
+
+  ImageModule.prototype.uploadImage = function(file, productId) {
+    var self = this;
+    if (!file) return Promise.resolve({ success: false, error: 'File tidak ditemukan' });
+    if (!file.type.startsWith('image/')) return Promise.resolve({ success: false, error: 'File harus berupa gambar' });
+    if (file.size > 5 * 1024 * 1024) return Promise.resolve({ success: false, error: 'Ukuran maksimal 5MB' });
+
+    this.uploading.value = true;
+    this.error.value = null;
+
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var base64Data = e.target.result;
+        google.script.run
+          .withSuccessHandler(function(result) {
+            self.uploading.value = false;
+            if (result.success) {
+              self.images.value.push({
+                id: result.fileId,
+                url: result.directLink
+              });
+              resolve({ success: true, image: { id: result.fileId, url: result.directLink } });
+            } else {
+              self.error.value = result.error || 'Gagal upload gambar';
+              resolve({ success: false, error: result.error });
+            }
+          })
+          .withFailureHandler(function(e) {
+            self.uploading.value = false;
+            self.error.value = e.message;
+            resolve({ success: false, error: e.message });
+          })
+          .uploadImageBase64({
+            imageData: base64Data,
+            fileName: file.name,
+            productId: productId
+          });
+      };
+      reader.onerror = function() {
+        self.uploading.value = false;
+        self.error.value = 'Gagal membaca file';
+        resolve({ success: false, error: 'Gagal membaca file' });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  ImageModule.prototype.removeImage = function(index) {
+    if (index >= 0 && index < this.images.value.length) {
+      this.images.value.splice(index, 1);
+      if (this.currentIndex.value >= this.images.value.length) {
+        this.currentIndex.value = Math.max(0, this.images.value.length - 1);
+      }
+    }
+  };
+
+  ImageModule.prototype.prevImage = function() {
+    if (this.images.value.length === 0) return;
+    if (this.currentIndex.value > 0) {
+      this.currentIndex.value--;
+    } else {
+      this.currentIndex.value = this.images.value.length - 1;
+    }
+  };
+
+  ImageModule.prototype.nextImage = function() {
+    if (this.images.value.length === 0) return;
+    if (this.currentIndex.value < this.images.value.length - 1) {
+      this.currentIndex.value++;
+    } else {
+      this.currentIndex.value = 0;
+    }
+  };
+
+  ImageModule.prototype.getImageIds = function() {
+    return this.images.value.map(function(img) { return img.id; }).join(',');
+  };
+
+  ImageModule.prototype.reset = function() {
+    this.images.value = [];
+    this.currentIndex.value = 0;
+    this.uploading.value = false;
+    this.error.value = null;
+  };
+
+  return ImageModule;
+})();
+
+/**
+ * Settings Module - Handles settings and categories management
+ */
+var SettingsModule = (function() {
+  function SettingsModule() {
+    this.settings = ref({
+      STORE_NAME: '',
+      MIN_ORDER_AMOUNT: '0',
+      DELIVERY_FEE: '0',
+      WAHA_URL: '',
+      WAHA_SESSION: 'default',
+      ADMIN_PHONE: '',
+      ADMIN_EMAILS: ''
+    });
+    this.categories = ref(['Makanan', 'Minuman', 'Snack', 'Dessert']);
+    this.loading = ref(false);
+    this.error = ref(null);
+  }
+
+  SettingsModule.prototype.loadSettings = function() {
+    var self = this;
+    this.loading.value = true;
+    this.error.value = null;
+
+    return new Promise(function(resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          self.settings.value = Object.assign(self.settings.value, result);
+          self.loadCategories();
+          self.loading.value = false;
+          resolve(result);
+        })
+        .withFailureHandler(function(e) {
+          self.loading.value = false;
+          self.error.value = e.message;
+          reject(e);
+        })
+        .getSettings();
+    });
+  };
+
+  SettingsModule.prototype.loadCategories = function() {
+    var self = this;
+    google.script.run
+      .withSuccessHandler(function(cats) {
+        if (cats && cats.length > 0) {
+          self.categories.value = cats;
+        }
+      })
+      .getCategories();
+  };
+
+  SettingsModule.prototype.saveCategories = function() {
+    google.script.run.setCategories(this.categories.value.join(', '));
+  };
+
+  SettingsModule.prototype.saveSettings = function() {
+    var self = this;
+    this.loading.value = true;
+    this.error.value = null;
+
+    return new Promise(function(resolve, reject) {
+      var promises = [];
+      for (var key in self.settings.value) {
+        if (self.settings.value.hasOwnProperty(key)) {
+          (function(k) {
+            promises.push(new Promise(function(res, rej) {
+              google.script.run
+                .withSuccessHandler(res)
+                .withFailureHandler(rej)
+                .updateSettings({ key: k, value: self.settings.value[k] });
+            }));
+          })(key);
+        }
+      }
+      Promise.all(promises)
+        .then(function() {
+          self.loading.value = false;
+          resolve({ success: true });
+        })
+        .catch(function(e) {
+          self.loading.value = false;
+          self.error.value = e.message;
+          resolve({ success: false, error: e.message });
+        });
+    });
+  };
+
+  SettingsModule.prototype.getDefaults = function() {
+    return {
+      STORE_NAME: 'RekaOrder',
+      MIN_ORDER_AMOUNT: '0',
+      DELIVERY_FEE: '0',
+      WAHA_URL: '',
+      WAHA_SESSION: 'default',
+      ADMIN_PHONE: ''
+    };
+  };
+
+  SettingsModule.prototype.formatDate = function(date) {
+    return date.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  return SettingsModule;
+})();
+</script>
